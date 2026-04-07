@@ -1,0 +1,2798 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketplace Ecosystem</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Instrument Sans",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+        color: #e2e8f0;
+        overflow: hidden;
+      }
+
+      #graph-container {
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .controls {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(15, 23, 42, 0.95);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        min-width: 200px;
+      }
+
+      .controls h3 {
+        margin-bottom: 15px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #f1f5f9;
+        letter-spacing: 0.5px;
+      }
+
+      .control-group {
+        margin-bottom: 10px;
+      }
+
+      .control-group label {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        color: #cbd5e1;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .control-group label:hover {
+        color: #f1f5f9;
+      }
+
+      .control-group input[type="checkbox"] {
+        margin-right: 10px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .legend {
+        position: absolute;
+        top: 20px;
+        left: 280px;
+        background: rgba(15, 23, 42, 0.95);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        max-width: 250px;
+      }
+
+      .legend h3 {
+        margin-bottom: 15px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #f1f5f9;
+        letter-spacing: 0.5px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: #cbd5e1;
+      }
+
+      .legend-line {
+        width: 40px;
+        height: 3px;
+        margin-right: 10px;
+        border-radius: 2px;
+      }
+
+      .node {
+        cursor: grab;
+        transition: filter 0.3s;
+      }
+
+      .node:active {
+        cursor: grabbing;
+      }
+
+      .node.dragging {
+        cursor: grabbing;
+      }
+
+      .node circle {
+        stroke: rgba(255, 255, 255, 0.3);
+        stroke-width: 2;
+        transition: all 0.3s;
+      }
+
+      .node:hover circle {
+        stroke: rgba(255, 255, 255, 0.8);
+        stroke-width: 3;
+        filter: drop-shadow(0 0 12px currentColor);
+      }
+
+      .node.dragging circle {
+        stroke: rgba(255, 255, 255, 1);
+        stroke-width: 4;
+        filter: drop-shadow(0 0 20px currentColor);
+      }
+
+      .node text {
+        fill: white;
+        text-anchor: middle;
+        font-size: 14px;
+        font-weight: 600;
+        pointer-events: none;
+        user-select: none;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      }
+
+      .edge {
+        fill: none;
+        opacity: 0.7;
+        transition: opacity 0.3s;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .edge.highlighted {
+        opacity: 1;
+        filter: drop-shadow(0 0 8px currentColor);
+      }
+
+      .edge-data {
+        stroke: #00d4ff;
+      }
+      .edge-revenue {
+        stroke: #16a34a;
+      }
+      .edge-oneoff {
+        stroke: #86efac;
+      }
+      .edge-product {
+        stroke: #a78bfa;
+      }
+      .edge-potential {
+        stroke: #fda4af;
+        stroke-dasharray: 8, 4;
+        opacity: 0.5;
+      }
+
+      .edge-label {
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .edge-label textPath {
+        fill: #9ca3af;
+        font-size: 11px;
+        font-weight: 500;
+        text-shadow: 0 0 3px rgba(10, 14, 39, 0.9);
+      }
+
+      .edge-split-label textPath {
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .split-handle {
+        cursor: grab;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .split-handle:hover,
+      .split-handle.visible {
+        opacity: 1;
+      }
+
+      .split-handle.dragging {
+        cursor: grabbing;
+        opacity: 1;
+      }
+
+      .split-handle.locked circle {
+        stroke: #fbbf24;
+        stroke-width: 2;
+      }
+
+      .split-handle circle {
+        fill: rgba(255, 255, 255, 0.15);
+        stroke: rgba(255, 255, 255, 0.6);
+        stroke-width: 1.5;
+        transition: all 0.2s;
+      }
+
+      .split-handle:hover circle {
+        fill: rgba(255, 255, 255, 0.25);
+        stroke: rgba(255, 255, 255, 0.9);
+        stroke-width: 2;
+        filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+      }
+
+      .instructions {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(15, 23, 42, 0.95);
+        padding: 15px 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      .instructions strong {
+        color: #f1f5f9;
+      }
+
+      .details-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(15, 23, 42, 0.95);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        min-width: 250px;
+        max-width: 350px;
+      }
+
+      .details-panel h3 {
+        margin: 0 0 15px 0;
+        color: #f1f5f9;
+        font-size: 16px;
+        border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        padding-bottom: 10px;
+      }
+
+      .details-panel .no-selection {
+        color: #64748b;
+        font-style: italic;
+      }
+
+      .details-panel .node-info {
+        color: #cbd5e1;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .details-panel .node-info .label {
+        color: #94a3b8;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 10px;
+        margin-bottom: 3px;
+      }
+
+      .details-panel .node-info .value {
+        color: #f1f5f9;
+      }
+
+      .connections-panel {
+        position: absolute;
+        bottom: 20px;
+        background: rgba(15, 23, 42, 0.95);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        min-width: 200px;
+        max-width: 280px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .connections-panel.inbound {
+        left: 390px;
+      }
+
+      .connections-panel.outbound {
+        left: 690px;
+      }
+
+      .connections-panel h3 {
+        margin: 0 0 15px 0;
+        color: #f1f5f9;
+        font-size: 14px;
+        border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+        padding-bottom: 10px;
+      }
+
+      .connections-panel .no-selection {
+        color: #64748b;
+        font-style: italic;
+        font-size: 12px;
+      }
+
+      .connection-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .connection-item {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(100, 116, 139, 0.15);
+        font-size: 12px;
+      }
+
+      .connection-item:last-child {
+        border-bottom: none;
+      }
+
+      .connection-item .edge-type {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        text-transform: uppercase;
+        margin-right: 6px;
+      }
+
+      .connection-item .edge-type.data {
+        background: rgba(0, 212, 255, 0.2);
+        color: #00d4ff;
+      }
+      .connection-item .edge-type.revenue {
+        background: rgba(22, 163, 74, 0.2);
+        color: #16a34a;
+      }
+      .connection-item .edge-type.oneoff {
+        background: rgba(134, 239, 172, 0.2);
+        color: #86efac;
+      }
+      .connection-item .edge-type.product {
+        background: rgba(167, 139, 250, 0.2);
+        color: #a78bfa;
+      }
+      .connection-item .edge-type.potential {
+        background: rgba(253, 164, 175, 0.2);
+        color: #fda4af;
+      }
+
+      .connection-item .node-name {
+        color: #f1f5f9;
+        font-weight: 500;
+      }
+
+      .connection-item .edge-label {
+        color: #94a3b8;
+        font-size: 11px;
+        display: block;
+        margin-top: 2px;
+      }
+
+      .connection-item .split-list {
+        margin-left: 16px;
+        margin-top: 6px;
+        padding-left: 10px;
+        border-left: 2px solid rgba(100, 116, 139, 0.3);
+      }
+
+      .connection-item .split-item {
+        color: #cbd5e1;
+        font-size: 11px;
+        padding: 3px 0;
+      }
+
+      .connection-item .split-item .split-target {
+        color: #10b981;
+      }
+
+      .connection-item .split-item .split-percent {
+        color: #fbbf24;
+        font-weight: 500;
+      }
+
+      .node.selected circle {
+        stroke: #fbbf24;
+        stroke-width: 4;
+      }
+
+      .company-node rect {
+        stroke: rgba(255, 255, 255, 0.4);
+        stroke-width: 1;
+        rx: 6;
+        ry: 6;
+      }
+
+      .company-node text {
+        font-size: 10px;
+        pointer-events: none;
+      }
+
+      .company-edge {
+        stroke: rgba(255, 255, 255, 0.35);
+        stroke-width: 2;
+        fill: none;
+      }
+
+      .company-node,
+      .company-edge {
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .company-node.visible,
+      .company-edge.visible {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h3>Flow Controls</h3>
+      <div class="control-group">
+        <label
+          ><input type="checkbox" id="show-data" checked />Show Data
+          Flows</label
+        >
+      </div>
+      <div class="control-group">
+        <label
+          ><input type="checkbox" id="show-revenue" checked />Show Recurring
+          Revenue</label
+        >
+      </div>
+      <div class="control-group">
+        <label
+          ><input type="checkbox" id="show-oneoff" checked />Show One-off
+          Revenue</label
+        >
+      </div>
+      <div class="control-group">
+        <label
+          ><input type="checkbox" id="show-product" checked />Show Product
+          Flows</label
+        >
+      </div>
+      <div class="control-group">
+        <label
+          ><input type="checkbox" id="show-potential" checked />Show Potential
+          Revshare</label
+        >
+      </div>
+      <div
+        class="control-group"
+        style="
+          margin-top: 15px;
+          padding-top: 15px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        "
+      >
+        <label
+          ><input type="checkbox" id="show-companies" />Show Companies</label
+        >
+      </div>
+      <div class="control-group" style="margin-top: 15px">
+        <label><input type="checkbox" id="animate-flows" />Animate Flows</label>
+      </div>
+      <div
+        class="control-group"
+        style="
+          margin-top: 15px;
+          padding-top: 15px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        "
+      >
+        <button
+          id="reset-layout"
+          style="
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            color: #93c5fd;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            width: 100%;
+            transition: all 0.2s;
+          "
+        >
+          Reset Layout
+        </button>
+      </div>
+    </div>
+
+    <div class="instructions">
+      <strong>Drag nodes</strong> to rearrange the layout<br />
+      <strong>Click nodes</strong> to see details<br />
+      <strong>Drag split points</strong> to lock their position<br />
+      <span style="color: #6b7280">Double-click split point to unlock</span>
+    </div>
+
+    <div class="details-panel">
+      <h3>Node Details</h3>
+      <div id="node-details">
+        <div class="no-selection">Click a node to see details</div>
+      </div>
+    </div>
+
+    <div class="connections-panel inbound">
+      <h3>⬅ Inbound Connections</h3>
+      <div id="inbound-connections">
+        <div class="no-selection">Click a node to see connections</div>
+      </div>
+    </div>
+
+    <div class="connections-panel outbound">
+      <h3>➡ Outbound Connections</h3>
+      <div id="outbound-connections">
+        <div class="no-selection">Click a node to see connections</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <h3>Legend</h3>
+      <div class="legend-item">
+        <div class="legend-line" style="background: #00d4ff"></div>
+        <span>Data Flow</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background: #16a34a"></div>
+        <span>Recurring Revenue</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background: #86efac"></div>
+        <span>One-off Revenue</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background: #a78bfa"></div>
+        <span>Product Delivery</span>
+      </div>
+      <div class="legend-item">
+        <div
+          class="legend-line"
+          style="
+            background: linear-gradient(
+              90deg,
+              #fda4af 0%,
+              #fda4af 60%,
+              transparent 60%,
+              transparent 75%,
+              #fda4af 75%,
+              #fda4af 100%
+            );
+            opacity: 0.6;
+          "
+        ></div>
+        <span>Potential Revenue (uncertain)</span>
+      </div>
+    </div>
+
+    <svg id="graph-container"></svg>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script>
+      window.addEventListener("load", function () {
+        if (typeof d3 === "undefined") {
+          document.body.innerHTML =
+            '<div style="color: white; padding: 50px; text-align: center;"><h1>Error: D3.js failed to load</h1></div>';
+          return;
+        }
+
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Padding from edges
+        const padding = { left: 120, right: 120, top: 100, bottom: 100 };
+        const usableWidth = width - padding.left - padding.right;
+        const usableHeight = height - padding.top - padding.bottom;
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+
+        function getPerpendicularOffset(x1, y1, x2, y2, offset) {
+          const dx = x2 - x1,
+            dy = y2 - y1,
+            len = Math.sqrt(dx * dx + dy * dy);
+          if (len === 0) return { x: 0, y: offset };
+          return { x: (-dy / len) * offset, y: (dx / len) * offset };
+        }
+
+        function shouldFlipTextPath(sourceNode, targetNode) {
+          const angle =
+            (Math.atan2(
+              targetNode.y - sourceNode.y,
+              targetNode.x - sourceNode.x,
+            ) *
+              180) /
+            Math.PI;
+          return angle > 90 || angle < -90;
+        }
+
+        function reversePath(pathString) {
+          const parts = pathString.match(/[A-Z][^A-Z]*/gi);
+          if (!parts) return pathString;
+          const coords = [];
+          parts.forEach((part) => {
+            const cmd = part[0],
+              vals = part
+                .slice(1)
+                .trim()
+                .split(/[\s,]+/)
+                .map(Number);
+            if (cmd === "M") coords.push({ type: "M", x: vals[0], y: vals[1] });
+            else if (cmd === "L")
+              coords.push({ type: "L", x: vals[0], y: vals[1] });
+            else if (cmd === "C")
+              coords.push({
+                type: "C",
+                x1: vals[0],
+                y1: vals[1],
+                x2: vals[2],
+                y2: vals[3],
+                x: vals[4],
+                y: vals[5],
+              });
+            else if (cmd === "Q")
+              coords.push({
+                type: "Q",
+                x1: vals[0],
+                y1: vals[1],
+                x: vals[2],
+                y: vals[3],
+              });
+          });
+          let result = "";
+          for (let i = coords.length - 1; i >= 0; i--) {
+            const p = coords[i];
+            if (i === coords.length - 1) result += `M ${p.x} ${p.y} `;
+            else {
+              const n = coords[i + 1];
+              if (n.type === "C")
+                result += `C ${n.x2} ${n.y2}, ${n.x1} ${n.y1}, ${p.x} ${p.y} `;
+              else if (n.type === "Q")
+                result += `Q ${n.x1} ${n.y1}, ${p.x} ${p.y} `;
+              else result += `L ${p.x} ${p.y} `;
+            }
+          }
+          return result.trim();
+        }
+
+        // ============================================
+        // NODE COLLISION DETECTION
+        // ============================================
+
+        // Check if a point is inside a node (with margin)
+        function pointInNode(px, py, node, margin = 15) {
+          const r = (node.radius || 55) + margin;
+          const dx = px - node.x;
+          const dy = py - node.y;
+          return dx * dx + dy * dy < r * r;
+        }
+
+        // Sample points along a cubic bezier
+        function sampleBezier(x0, y0, x1, y1, x2, y2, x3, y3, samples = 20) {
+          const points = [];
+          for (let i = 0; i <= samples; i++) {
+            const t = i / samples;
+            const mt = 1 - t;
+            const x =
+              mt * mt * mt * x0 +
+              3 * mt * mt * t * x1 +
+              3 * mt * t * t * x2 +
+              t * t * t * x3;
+            const y =
+              mt * mt * mt * y0 +
+              3 * mt * mt * t * y1 +
+              3 * mt * t * t * y2 +
+              t * t * t * y3;
+            points.push({ x, y, t });
+          }
+          return points;
+        }
+
+        // Check if a bezier curve passes through any node (excluding source and target)
+        function findNodeCollisions(
+          x0,
+          y0,
+          x1,
+          y1,
+          x2,
+          y2,
+          x3,
+          y3,
+          excludeIds,
+        ) {
+          const collisions = [];
+          const samples = sampleBezier(x0, y0, x1, y1, x2, y2, x3, y3, 30);
+
+          for (const node of nodes) {
+            if (excludeIds.includes(node.id)) continue;
+
+            for (const pt of samples) {
+              if (pointInNode(pt.x, pt.y, node, 20)) {
+                collisions.push({
+                  node: node,
+                  t: pt.t,
+                  x: pt.x,
+                  y: pt.y,
+                });
+                break; // One collision per node is enough
+              }
+            }
+          }
+          return collisions;
+        }
+
+        // Calculate avoidance waypoint for a node
+        function getAvoidancePoint(fromX, fromY, toX, toY, node) {
+          const nodeRadius = (node.radius || 55) + 30;
+          const midX = (fromX + toX) / 2;
+          const midY = (fromY + toY) / 2;
+
+          // Direction from node to midpoint
+          const dx = midX - node.x;
+          const dy = midY - node.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 1) {
+            // Midpoint is at node center, go perpendicular to the line
+            const lineDx = toX - fromX;
+            const lineDy = toY - fromY;
+            const lineLen = Math.sqrt(lineDx * lineDx + lineDy * lineDy);
+            return {
+              x: node.x + (-lineDy / lineLen) * nodeRadius,
+              y: node.y + (lineDx / lineLen) * nodeRadius,
+            };
+          }
+
+          // Push the waypoint out from the node center
+          return {
+            x: node.x + (dx / dist) * nodeRadius,
+            y: node.y + (dy / dist) * nodeRadius,
+          };
+        }
+
+        // ============================================
+        // SVG SETUP
+        // ============================================
+
+        const svg = d3
+          .select("#graph-container")
+          .attr("width", width)
+          .attr("height", height);
+        const defs = svg.append("defs");
+        const companyEdgeGroup = svg.append("g").attr("class", "company-edges");
+        const edgeGroup = svg.append("g").attr("class", "edges");
+        const splitHandleGroup = svg.append("g").attr("class", "split-handles");
+        const companyNodeGroup = svg.append("g").attr("class", "company-nodes");
+        const nodeGroup = svg.append("g").attr("class", "nodes");
+
+        // Store locked split point positions (key: edgeIndex, value: {x, y})
+        const lockedSplitPositions = {};
+
+        // Store current split positions for hover detection
+        let currentSplitPositions = [];
+
+        // ============================================
+        // DATA DEFINITIONS
+        // ============================================
+
+        const nodes = [
+          {
+            id: "creators",
+            label: "Content\nCreators",
+            layer: 0,
+            color: "#3b82f6",
+            description:
+              "End users who produce content and generate engagement data through their activity.",
+            role: "Data Source",
+            dataTypes:
+              "Usage patterns, preferences, engagement metrics, uploads",
+          },
+          {
+            id: "subscribers",
+            label: "Subscribers",
+            layer: 0,
+            color: "#3b82f6",
+            description:
+              "End users and businesses consuming platform services and content.",
+            role: "Revenue Source",
+            dataTypes: "Subscription fees, API usage, service requests",
+          },
+          {
+            id: "publishers",
+            label: "Publishers\n(Content Owners)",
+            layer: 1,
+            color: "#10b981",
+            description:
+              "Organizations that curate and own the content and user data generated on their properties.",
+            role: "Data Owner",
+            dataTypes: "Content metadata, user analytics, session data",
+          },
+          {
+            id: "platform",
+            label: "Marketplace\n(Broker)",
+            layer: 2,
+            color: "#f59e0b",
+            radius: 80,
+            description:
+              "Platform that aggregates, processes, and brokers content and data between producers and consumers.",
+            role: "Data Broker",
+            dataTypes:
+              "Aggregated datasets, curated content, anonymized insights",
+          },
+          {
+            id: "enterprise",
+            label: "Enterprise\nBuyers",
+            layer: 3,
+            color: "#8b5cf6",
+            description:
+              "Large organizations purchasing data and content for internal use and product development.",
+            role: "Data Consumer",
+            dataTypes: "Licensed datasets, bulk content packages",
+          },
+          {
+            id: "agencies",
+            label: "Agencies",
+            layer: 3,
+            color: "#8b5cf6",
+            description:
+              "Service firms building solutions and products on top of marketplace data.",
+            role: "Data Consumer",
+            dataTypes: "Specialized datasets, API access",
+          },
+          {
+            id: "cloudinfra",
+            label: "Cloud Providers\n(Infrastructure)",
+            layer: 3,
+            color: "#ec4899",
+            description:
+              "Infrastructure providers hosting platform services and compute resources.",
+            role: "Infrastructure",
+            dataTypes: "Hosting, compute, storage services",
+          },
+          {
+            id: "mediabuyers",
+            label: "Media\nBuyers",
+            layer: 3,
+            color: "#8b5cf6",
+            description:
+              "Organizations purchasing audience insights for campaign targeting.",
+            role: "Data Consumer",
+            dataTypes: "Audience segments, behavioral insights",
+          },
+        ];
+
+        // Company nodes associated with each major node
+        const companyNodes = [
+          // Content Creators - example platforms
+          { id: "creatora", label: "Creator Platform A", parent: "creators", color: "#3b82f6" },
+          { id: "creatorb", label: "Creator Platform B", parent: "creators", color: "#3b82f6" },
+          { id: "creatorc", label: "Creator Platform C", parent: "creators", color: "#3b82f6" },
+          { id: "creatord", label: "Creator Platform D", parent: "creators", color: "#3b82f6" },
+          { id: "creatore", label: "Creator Platform E", parent: "creators", color: "#3b82f6" },
+
+          // Subscribers - consumer apps
+          { id: "suba", label: "Consumer App A", parent: "subscribers", color: "#3b82f6" },
+          { id: "subb", label: "Consumer App B", parent: "subscribers", color: "#3b82f6" },
+          { id: "subc", label: "Consumer App C", parent: "subscribers", color: "#3b82f6" },
+          { id: "subd", label: "Enterprise App A", parent: "subscribers", color: "#3b82f6" },
+          { id: "sube", label: "Enterprise App B", parent: "subscribers", color: "#3b82f6" },
+
+          // Publishers
+          { id: "puba", label: "Publisher Alpha", parent: "publishers", color: "#10b981" },
+          { id: "pubb", label: "Publisher Beta", parent: "publishers", color: "#10b981" },
+          { id: "pubc", label: "Publisher Gamma", parent: "publishers", color: "#10b981" },
+          { id: "pubd", label: "Publisher Delta", parent: "publishers", color: "#10b981" },
+          { id: "pube", label: "Publisher Epsilon", parent: "publishers", color: "#10b981" },
+          { id: "pubf", label: "Publisher Zeta", parent: "publishers", color: "#10b981" },
+
+          // Enterprise Buyers
+          { id: "enta", label: "Buyer One", parent: "enterprise", color: "#8b5cf6" },
+          { id: "entb", label: "Buyer Two", parent: "enterprise", color: "#8b5cf6" },
+          { id: "entc", label: "Buyer Three", parent: "enterprise", color: "#8b5cf6" },
+          { id: "entd", label: "Buyer Four", parent: "enterprise", color: "#8b5cf6" },
+          { id: "ente", label: "Buyer Five", parent: "enterprise", color: "#8b5cf6" },
+
+          // Agencies
+          { id: "agencya", label: "Agency Alpha", parent: "agencies", color: "#8b5cf6" },
+          { id: "agencyb", label: "Agency Beta", parent: "agencies", color: "#8b5cf6" },
+          { id: "agencyc", label: "Agency Gamma", parent: "agencies", color: "#8b5cf6" },
+          { id: "agencyd", label: "Agency Delta", parent: "agencies", color: "#8b5cf6" },
+          { id: "agencye", label: "Agency Epsilon", parent: "agencies", color: "#8b5cf6" },
+
+          // Cloud Providers
+          { id: "clouda", label: "Cloud Provider A", parent: "cloudinfra", color: "#ec4899" },
+          { id: "cloudb", label: "Cloud Provider B", parent: "cloudinfra", color: "#ec4899" },
+          { id: "cloudc", label: "Cloud Provider C", parent: "cloudinfra", color: "#ec4899" },
+          { id: "cloudd", label: "Cloud Provider D", parent: "cloudinfra", color: "#ec4899" },
+          { id: "cloude", label: "Cloud Provider E", parent: "cloudinfra", color: "#ec4899" },
+
+          // Media Buyers
+          { id: "mediaa", label: "Media Buyer A", parent: "mediabuyers", color: "#8b5cf6" },
+          { id: "mediab", label: "Media Buyer B", parent: "mediabuyers", color: "#8b5cf6" },
+          { id: "mediac", label: "Media Buyer C", parent: "mediabuyers", color: "#8b5cf6" },
+          { id: "mediad", label: "Media Buyer D", parent: "mediabuyers", color: "#8b5cf6" },
+          { id: "mediae", label: "Media Buyer E", parent: "mediabuyers", color: "#8b5cf6" },
+        ];
+
+        // Initialize company node positions (hidden by default)
+        companyNodes.forEach((cn) => {
+          cn.visible = false;
+          cn.radius = 25;
+          cn.isCompany = true;
+        });
+
+        // Track selected node
+        let selectedNodeId = null;
+
+        // Layer positions - spread across width
+        const layerPositions = {
+          0: padding.left + usableWidth * 0.02,
+          1: padding.left + usableWidth * 0.28,
+          2: padding.left + usableWidth * 0.54,
+          3: padding.left + usableWidth * 0.88,
+        };
+
+        const nodesByLayer = {};
+        nodes.forEach((n) => {
+          if (!nodesByLayer[n.layer]) nodesByLayer[n.layer] = [];
+          nodesByLayer[n.layer].push(n);
+        });
+
+        // Store initial positions for reset
+        const initialPositions = {};
+
+        function calculateInitialPositions() {
+          Object.keys(nodesByLayer).forEach((layer) => {
+            const layerNodes = nodesByLayer[layer];
+            const minSpacing = 140;
+            const totalSpacing = Math.min(
+              usableHeight,
+              (layerNodes.length - 1) * minSpacing,
+            );
+            const startY = padding.top + (usableHeight - totalSpacing) / 2;
+
+            layerNodes.forEach((n, i) => {
+              n.x = layerPositions[layer];
+              if (layerNodes.length === 1) {
+                n.y = padding.top + usableHeight / 2;
+              } else {
+                const spacing = totalSpacing / (layerNodes.length - 1);
+                n.y = startY + i * spacing;
+              }
+              initialPositions[n.id] = { x: n.x, y: n.y };
+            });
+          });
+        }
+
+        calculateInitialPositions();
+
+        const edges = [
+          // Creator data flows through publishers to platform
+          {
+            source: "creators",
+            target: "publishers",
+            type: "data",
+            label: "User engagement data",
+            weight: 6.0,
+          },
+          {
+            source: "publishers",
+            target: "platform",
+            type: "data",
+            label: "Content analytics",
+            weight: 5.0,
+          },
+          {
+            source: "platform",
+            target: "mediabuyers",
+            type: "data",
+            label: "Audience data",
+            weight: 3.0,
+          },
+
+          // Revenue from data buyers with splits to publishers
+          {
+            source: "enterprise",
+            target: "platform",
+            type: "oneoff",
+            label: "Content licensing fee",
+            brokerCommission: 0.2,
+            split: [{ target: "publishers", ratio: 0.8, label: "80%" }],
+            weight: 5.0,
+          },
+          {
+            source: "agencies",
+            target: "platform",
+            type: "revenue",
+            label: "Data access fee",
+            brokerCommission: 0.2,
+            split: [{ target: "publishers", ratio: 0.8, label: "80%" }],
+            weight: 2.0,
+          },
+          {
+            source: "mediabuyers",
+            target: "platform",
+            type: "revenue",
+            label: "Audience data fee",
+            brokerCommission: 0.2,
+            split: [{ target: "publishers", ratio: 0.8, label: "80%" }],
+            weight: 5.0,
+          },
+
+          // Subscribers pay enterprise buyers for services
+          {
+            source: "subscribers",
+            target: "enterprise",
+            type: "revenue",
+            label: "Service subscription fees",
+            brokerCommission: 0.1,
+            weight: 5.0,
+          },
+
+          // Product delivery from platform
+          {
+            source: "platform",
+            target: "enterprise",
+            type: "product",
+            label: "Licensed content packages",
+            weight: 3.0,
+          },
+          {
+            source: "platform",
+            target: "agencies",
+            type: "product",
+            label: "Curated datasets",
+            weight: 1.0,
+          },
+          {
+            source: "platform",
+            target: "mediabuyers",
+            type: "product",
+            label: "Audience insights",
+            weight: 5.0,
+          },
+          {
+            source: "platform",
+            target: "publishers",
+            type: "product",
+            label: "Analytics dashboards",
+            weight: 3.0,
+          },
+          {
+            source: "platform",
+            target: "creators",
+            type: "product",
+            label: "Recommendations, tools, reports",
+            weight: 1.0,
+          },
+
+          // Publishers pay platform for analytics services
+          {
+            source: "publishers",
+            target: "platform",
+            type: "revenue",
+            label: "Analytics services",
+            weight: 1.5,
+          },
+
+          // Enterprise buyers provide services to agencies
+          {
+            source: "enterprise",
+            target: "agencies",
+            type: "product",
+            label: "Licensed tools",
+            weight: 5.0,
+          },
+
+          // Agencies pay enterprise buyers for tools
+          {
+            source: "agencies",
+            target: "enterprise",
+            type: "revenue",
+            label: "Tool licensing fees",
+            brokerCommission: 0.05,
+            weight: 5.0,
+          },
+
+          // Cloud providers host services for enterprise and agencies
+          {
+            source: "cloudinfra",
+            target: "enterprise",
+            type: "product",
+            label: "Compute hosting",
+            weight: 5.0,
+          },
+          {
+            source: "cloudinfra",
+            target: "agencies",
+            type: "product",
+            label: "Compute hosting",
+            weight: 5.0,
+          },
+
+          // Potential infrastructure fees (uncertain/speculative)
+          {
+            source: "cloudinfra",
+            target: "enterprise",
+            type: "potential",
+            label: "Hosting fees",
+            brokerCommission: 0.05,
+            weight: 5.0,
+          },
+          {
+            source: "cloudinfra",
+            target: "agencies",
+            type: "potential",
+            label: "Hosting fees",
+            brokerCommission: 0.05,
+            weight: 5.0,
+          },
+        ];
+
+        // ============================================
+        // EDGE OFFSET CALCULATION
+        // ============================================
+
+        function calculateEdgeOffsets() {
+          const offsets = {};
+          const groups = {};
+          edges.forEach((e) => {
+            const key = [e.source, e.target].sort().join("-");
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(e);
+          });
+          Object.values(groups).forEach((group) => {
+            if (group.length > 1) {
+              const spacing = 18;
+              const totalOffset = (group.length - 1) * spacing;
+              group.forEach(
+                (e, i) =>
+                  (offsets[`${e.source}-${e.target}`] =
+                    -totalOffset / 2 + i * spacing),
+              );
+            }
+          });
+          return offsets;
+        }
+
+        let edgeOffsets = calculateEdgeOffsets();
+
+        // ============================================
+        // EDGE PATH CREATION WITH NODE AVOIDANCE
+        // ============================================
+
+        function createEdgePath(startX, startY, endX, endY, excludeIds) {
+          const dx = endX - startX;
+          const dy = endY - startY;
+
+          // Initial bezier control points
+          let ctrl1X = startX + dx * 0.35;
+          let ctrl1Y = startY;
+          let ctrl2X = endX - dx * 0.35;
+          let ctrl2Y = endY;
+
+          // Check for collisions
+          const collisions = findNodeCollisions(
+            startX,
+            startY,
+            ctrl1X,
+            ctrl1Y,
+            ctrl2X,
+            ctrl2Y,
+            endX,
+            endY,
+            excludeIds,
+          );
+
+          if (collisions.length > 0) {
+            // Find the node causing the most central collision
+            const collision = collisions.reduce((a, b) =>
+              Math.abs(a.t - 0.5) < Math.abs(b.t - 0.5) ? a : b,
+            );
+
+            const avoidPt = getAvoidancePoint(
+              startX,
+              startY,
+              endX,
+              endY,
+              collision.node,
+            );
+
+            // Determine which way to route around (top or bottom)
+            const midY = (startY + endY) / 2;
+            const routeUp = collision.node.y > midY;
+
+            // Offset the avoidance point further in the routing direction
+            const offsetAmount = (collision.node.radius || 55) + 40;
+            const avoidY = routeUp
+              ? Math.min(avoidPt.y, collision.node.y - offsetAmount)
+              : Math.max(avoidPt.y, collision.node.y + offsetAmount);
+
+            // Adjust control points to route around
+            ctrl1X = startX + dx * 0.25;
+            ctrl1Y = startY + (avoidY - startY) * 0.5;
+            ctrl2X = endX - dx * 0.25;
+            ctrl2Y = endY + (avoidY - endY) * 0.5;
+
+            // For severe collisions, use a waypoint approach
+            if (collisions.length > 1 || Math.abs(collision.t - 0.5) < 0.2) {
+              return `M ${startX} ${startY} Q ${startX + dx * 0.3} ${avoidY}, ${startX + dx * 0.5} ${avoidY} Q ${endX - dx * 0.3} ${avoidY}, ${endX} ${endY}`;
+            }
+          }
+
+          return `M ${startX} ${startY} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${endX} ${endY}`;
+        }
+
+        // ============================================
+        // SPLIT PATH CREATION WITH OPTIMAL SPLIT POINT
+        // ============================================
+
+        // Calculate split point at 1/3 of path from source toward targets
+        function calculateOptimalSplitPoint(startX, startY, targets, weights) {
+          // Calculate weighted centroid of all targets
+          let centroidX = 0,
+            centroidY = 0,
+            totalWeight = 0;
+          targets.forEach((t, i) => {
+            const w = weights[i] || 1;
+            centroidX += t.x * w;
+            centroidY += t.y * w;
+            totalWeight += w;
+          });
+          centroidX /= totalWeight;
+          centroidY /= totalWeight;
+
+          // Position split point at 1/3 of the way from source toward centroid
+          const splitRatio = 1 / 3;
+          const dx = centroidX - startX;
+          const dy = centroidY - startY;
+
+          const splitX = startX + dx * splitRatio;
+          const splitY = startY + dy * splitRatio;
+
+          return { x: splitX, y: splitY };
+        }
+
+        // Calculate tangent direction at split point for smooth fan-out
+        function calculateSplitTangent(
+          startX,
+          startY,
+          splitX,
+          splitY,
+          targets,
+          weights,
+        ) {
+          // Incoming direction
+          const inDx = splitX - startX;
+          const inDy = splitY - startY;
+          const inLen = Math.sqrt(inDx * inDx + inDy * inDy);
+          const inNormX = inDx / inLen,
+            inNormY = inDy / inLen;
+
+          // Weighted average outgoing direction
+          let outDx = 0,
+            outDy = 0,
+            totalWeight = 0;
+          targets.forEach((t, i) => {
+            const w = weights[i] || 1;
+            const tdx = t.x - splitX;
+            const tdy = t.y - splitY;
+            const tLen = Math.sqrt(tdx * tdx + tdy * tdy);
+            if (tLen > 0) {
+              outDx += (tdx / tLen) * w;
+              outDy += (tdy / tLen) * w;
+              totalWeight += w;
+            }
+          });
+          outDx /= totalWeight;
+          outDy /= totalWeight;
+          const outLen = Math.sqrt(outDx * outDx + outDy * outDy);
+          const outNormX = outDx / outLen,
+            outNormY = outDy / outLen;
+
+          // Blend incoming and outgoing directions for smooth transition
+          const blend = 0.5;
+          let tanX = inNormX * (1 - blend) + outNormX * blend;
+          let tanY = inNormY * (1 - blend) + outNormY * blend;
+          const tanLen = Math.sqrt(tanX * tanX + tanY * tanY);
+
+          return {
+            x: tanX / tanLen,
+            y: tanY / tanLen,
+          };
+        }
+
+        function createSplitPath(edge, edgeIndex) {
+          const src = nodes.find((n) => n.id === edge.source);
+          const tgt = nodes.find((n) => n.id === edge.target);
+          const offset = edgeOffsets[`${edge.source}-${edge.target}`] || 0;
+          const perp = getPerpendicularOffset(
+            src.x,
+            src.y,
+            tgt.x,
+            tgt.y,
+            offset,
+          );
+
+          const srcRadius = src.radius || 55;
+          const tgtRadius = tgt.radius || 55;
+
+          // Calculate edge start point at node center (edges will be hidden by nodes)
+          const startX = src.x + perp.x;
+          const startY = src.y + perp.y;
+
+          const pathId = `edge-path-${edgeIndex}`;
+
+          // Determine if this is a split edge (has manual splits OR has brokerCommission)
+          const hasSplit =
+            edge.split || (edge.brokerCommission && edge.brokerCommission > 0);
+          const edgeWeight = edge.weight || 5;
+          const baseWidth = edgeWeight * 10;
+
+          if (!hasSplit) {
+            // Simple edge with node avoidance - end at node center
+            const endX = tgt.x + perp.x;
+            const endY = tgt.y + perp.y;
+            const path = createEdgePath(startX, startY, endX, endY, [
+              edge.source,
+              edge.target,
+            ]);
+            return { main: path, pathId, width: baseWidth };
+          }
+
+          // Collect all targets and their weights
+          const allTargets = [];
+          const allWeights = [];
+          const broker = nodes.find((n) => n.id === "broker");
+
+          if (edge.brokerCommission && edge.brokerCommission > 0) {
+            // broker gets the commission
+            allTargets.push({ x: broker.x, y: broker.y, node: broker });
+            allWeights.push(edge.brokerCommission);
+
+            // If no manual splits defined, the original target gets the remainder
+            if (!edge.split) {
+              allTargets.push({ x: tgt.x, y: tgt.y, node: tgt });
+              allWeights.push(1 - edge.brokerCommission);
+            }
+          }
+
+          if (edge.split) {
+            edge.split.forEach((s) => {
+              const st = nodes.find((n) => n.id === s.target);
+              allTargets.push({ x: st.x, y: st.y, node: st });
+              allWeights.push(s.ratio);
+            });
+          }
+
+          // Calculate optimal split point position OR use locked position
+          let splitX, splitY;
+          if (lockedSplitPositions[edgeIndex]) {
+            splitX = lockedSplitPositions[edgeIndex].x;
+            splitY = lockedSplitPositions[edgeIndex].y;
+          } else {
+            const optimalSplit = calculateOptimalSplitPoint(
+              startX,
+              startY,
+              allTargets,
+              allWeights,
+            );
+            splitX = optimalSplit.x;
+            splitY = optimalSplit.y;
+          }
+
+          // Calculate optimal tangent direction at split based on INBOUND direction only
+          const inDx = splitX - startX;
+          const inDy = splitY - startY;
+          const inLen = Math.sqrt(inDx * inDx + inDy * inDy);
+          const tanNormX = inDx / inLen;
+          const tanNormY = inDy / inLen;
+          const perpNormX = -tanNormY;
+          const perpNormY = tanNormX;
+
+          // Create smooth main path to split point CENTER (no overlap extension)
+          const mainDx = splitX - startX;
+          const mainDy = splitY - startY;
+          const mainDist = Math.sqrt(mainDx * mainDx + mainDy * mainDy);
+
+          // Control points for a smooth curve to the split point
+          const ctrl1X = startX + mainDx * 0.4;
+          const ctrl1Y = startY + mainDy * 0.15;
+          const ctrl2X = splitX - mainDx * 0.2;
+          const ctrl2Y = splitY - mainDy * 0.1;
+
+          // Main path terminates exactly at split point center
+          const mainPath = `M ${startX} ${startY} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${splitX} ${splitY}`;
+
+          // Collect all outgoing paths
+          const outgoingPaths = [];
+
+          if (edge.brokerCommission && edge.brokerCommission > 0) {
+            // Broker gets the commission
+            outgoingPaths.push({
+              target: broker,
+              width: edge.brokerCommission * baseWidth,
+              label: `${Math.round(edge.brokerCommission * 100)}%`,
+              pathId: `${pathId}-broker`,
+              type: "broker",
+              targetId: "broker",
+            });
+
+            // If no manual splits, original target gets the remainder
+            if (!edge.split) {
+              const remainder = 1 - edge.brokerCommission;
+              outgoingPaths.push({
+                target: tgt,
+                width: remainder * baseWidth,
+                label: `${Math.round(remainder * 100)}%`,
+                pathId: `${pathId}-target`,
+                type: "split",
+                targetId: tgt.id,
+              });
+            }
+          }
+
+          if (edge.split) {
+            edge.split.forEach((s, idx) => {
+              const st = nodes.find((n) => n.id === s.target);
+              outgoingPaths.push({
+                target: st,
+                width: s.ratio * baseWidth,
+                label: s.label,
+                pathId: `${pathId}-split-${idx}`,
+                targetId: s.target,
+                type: "split",
+              });
+            });
+          }
+
+          // Sort by perpendicular position to minimize crossings
+          outgoingPaths.forEach((p) => {
+            const toTargetX = p.target.x - splitX;
+            const toTargetY = p.target.y - splitY;
+            p.perpPosition = toTargetX * perpNormX + toTargetY * perpNormY;
+          });
+          outgoingPaths.sort((a, b) => a.perpPosition - b.perpPosition);
+
+          const totalWidth = outgoingPaths.reduce((sum, p) => sum + p.width, 0);
+          let currentOffset = -totalWidth / 2;
+
+          const sankeyPaths = outgoingPaths.map((p, idx) => {
+            const centerOffset = currentOffset + p.width / 2;
+            currentOffset += p.width;
+
+            // Start point ON the perpendicular line through split point center
+            // All outgoing paths start from points along this perpendicular line
+            const centerStartX = splitX + perpNormX * centerOffset;
+            const centerStartY = splitY + perpNormY * centerOffset;
+
+            // Target at node center (edge will be hidden by node)
+            const targetX = p.target.x;
+            const targetY = p.target.y;
+
+            // Calculate direction to target
+            const splitDx = targetX - centerStartX;
+            const splitDy = targetY - centerStartY;
+            const splitDist = Math.sqrt(splitDx * splitDx + splitDy * splitDy);
+            const splitDirX = splitDx / splitDist;
+            const splitDirY = splitDy / splitDist;
+
+            // Check for node collisions
+            const excludeIds = [edge.source, edge.target, p.targetId];
+
+            // Calculate how aligned the outgoing direction is with the tangent
+            const alignment = tanNormX * splitDirX + tanNormY * splitDirY;
+
+            // For well-aligned paths, use gentler curves
+            // For paths that diverge more, use stronger initial tangent following
+            const tangentInfluence = Math.max(
+              0,
+              0.5 - Math.abs(alignment - 0.7),
+            );
+
+            // Control points that create smooth flow
+            const ctrl1Factor = 0.25 + tangentInfluence * 0.15;
+            const ctrl1X =
+              centerStartX +
+              tanNormX * splitDist * ctrl1Factor +
+              splitDx * (0.35 - tangentInfluence * 0.1);
+            const ctrl1Y =
+              centerStartY +
+              tanNormY * splitDist * ctrl1Factor +
+              splitDy * (0.35 - tangentInfluence * 0.1);
+
+            // Second control point approaches target smoothly
+            const ctrl2X = targetX - splitDx * 0.25;
+            const ctrl2Y = targetY - splitDy * 0.25;
+
+            // Check for collisions
+            const collisions = findNodeCollisions(
+              centerStartX,
+              centerStartY,
+              ctrl1X,
+              ctrl1Y,
+              ctrl2X,
+              ctrl2Y,
+              targetX,
+              targetY,
+              excludeIds,
+            );
+
+            let path;
+            if (collisions.length > 0) {
+              // Route around the colliding node
+              const collision = collisions[0];
+              const avoidPt = getAvoidancePoint(
+                centerStartX,
+                centerStartY,
+                targetX,
+                targetY,
+                collision.node,
+              );
+
+              const routeUp = collision.node.y > (centerStartY + targetY) / 2;
+              const offsetAmount = (collision.node.radius || 55) + 35;
+              const avoidY = routeUp
+                ? Math.min(avoidPt.y, collision.node.y - offsetAmount)
+                : Math.max(avoidPt.y, collision.node.y + offsetAmount);
+
+              const midX = (centerStartX + targetX) / 2;
+              path = `M ${centerStartX} ${centerStartY} Q ${midX} ${avoidY}, ${targetX} ${targetY}`;
+            } else {
+              path = `M ${centerStartX} ${centerStartY} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${targetX} ${targetY}`;
+            }
+
+            return {
+              path: path,
+              pathId: p.pathId,
+              width: p.width,
+              label: p.label,
+              targetId: p.targetId,
+              type: p.type,
+            };
+          });
+
+          return {
+            main: mainPath,
+            mainWidth: baseWidth,
+            splits: sankeyPaths,
+            splitPoint: { x: splitX, y: splitY },
+            pathId,
+            edgeIndex,
+            isLocked: !!lockedSplitPositions[edgeIndex],
+            isSankey: true,
+            tangent: { x: tanNormX, y: tanNormY },
+            perpendicular: { x: perpNormX, y: perpNormY },
+          };
+        }
+
+        // ============================================
+        // DRAWING FUNCTIONS
+        // ============================================
+
+        function drawEdges() {
+          edgeGroup.selectAll("*").remove();
+          defs.selectAll("clipPath").remove();
+
+          // Reset current split positions
+          currentSplitPositions = [];
+
+          edges.forEach((edge, i) => {
+            const ed = createSplitPath(edge, i);
+            const edgeGroupEl = edgeGroup
+              .append("g")
+              .attr("class", `edge-container edge-type-${edge.type}`);
+
+            if (!ed.splits) {
+              edgeGroupEl
+                .append("path")
+                .attr("class", `edge edge-${edge.type}`)
+                .attr("d", ed.main)
+                .attr("id", ed.pathId)
+                .attr("data-type", edge.type)
+                .attr("data-source", edge.source)
+                .attr("data-target", edge.target)
+                .attr("stroke-width", ed.width);
+
+              const src = nodes.find((n) => n.id === edge.source);
+              const tgt = nodes.find((n) => n.id === edge.target);
+              const shouldFlip = shouldFlipTextPath(src, tgt);
+              let textPathId = ed.pathId;
+              if (shouldFlip) {
+                textPathId = ed.pathId + "-text";
+                edgeGroupEl
+                  .append("path")
+                  .attr("id", textPathId)
+                  .attr("d", reversePath(ed.main))
+                  .style("display", "none");
+              }
+
+              edgeGroupEl
+                .append("text")
+                .attr("class", "edge-label")
+                .append("textPath")
+                .attr("xlink:href", "#" + textPathId)
+                .attr("startOffset", "50%")
+                .attr("text-anchor", "middle")
+                .text(edge.label);
+            } else {
+              // Track this split position
+              currentSplitPositions.push({
+                edgeIndex: i,
+                x: ed.splitPoint.x,
+                y: ed.splitPoint.y,
+                isLocked: ed.isLocked,
+                edgeType: edge.type,
+              });
+
+              const g = edgeGroupEl
+                .append("g")
+                .attr("class", "edge-group edge-group-split")
+                .attr("data-source", edge.source)
+                .attr("data-target", edge.target);
+
+              // Create clip paths
+              const clipDist = 5000;
+              const perpX1 = ed.splitPoint.x + ed.perpendicular.x * clipDist;
+              const perpY1 = ed.splitPoint.y + ed.perpendicular.y * clipDist;
+              const perpX2 = ed.splitPoint.x - ed.perpendicular.x * clipDist;
+              const perpY2 = ed.splitPoint.y - ed.perpendicular.y * clipDist;
+              const backX1 = perpX1 - ed.tangent.x * clipDist;
+              const backY1 = perpY1 - ed.tangent.y * clipDist;
+              const backX2 = perpX2 - ed.tangent.x * clipDist;
+              const backY2 = perpY2 - ed.tangent.y * clipDist;
+              const forwardX1 = perpX1 + ed.tangent.x * clipDist;
+              const forwardY1 = perpY1 + ed.tangent.y * clipDist;
+              const forwardX2 = perpX2 + ed.tangent.x * clipDist;
+              const forwardY2 = perpY2 + ed.tangent.y * clipDist;
+
+              const clipIdMain = `clip-main-${ed.pathId}`;
+              defs
+                .append("clipPath")
+                .attr("id", clipIdMain)
+                .append("polygon")
+                .attr(
+                  "points",
+                  `${backX1},${backY1} ${backX2},${backY2} ${perpX2},${perpY2} ${perpX1},${perpY1}`,
+                );
+
+              const clipIdSplit = `clip-split-${ed.pathId}`;
+              defs
+                .append("clipPath")
+                .attr("id", clipIdSplit)
+                .append("polygon")
+                .attr(
+                  "points",
+                  `${perpX1},${perpY1} ${perpX2},${perpY2} ${forwardX2},${forwardY2} ${forwardX1},${forwardY1}`,
+                );
+
+              // Main path
+              g.append("path")
+                .attr("class", `edge edge-${edge.type}`)
+                .attr("d", ed.main)
+                .attr("id", ed.pathId)
+                .attr("data-type", edge.type)
+                .attr("data-source", edge.source)
+                .attr("data-target", edge.target)
+                .attr("stroke-width", ed.mainWidth)
+                .attr("clip-path", `url(#${clipIdMain})`);
+
+              const src = nodes.find((n) => n.id === edge.source);
+              const tgt = nodes.find((n) => n.id === edge.target);
+              const shouldFlip = shouldFlipTextPath(src, tgt);
+              let mainTextPathId = ed.pathId;
+              if (shouldFlip) {
+                mainTextPathId = ed.pathId + "-text";
+                g.append("path")
+                  .attr("id", mainTextPathId)
+                  .attr("d", reversePath(ed.main))
+                  .style("display", "none");
+              }
+
+              g.append("text")
+                .attr("class", "edge-label")
+                .append("textPath")
+                .attr("xlink:href", "#" + mainTextPathId)
+                .attr("startOffset", "50%")
+                .attr("text-anchor", "middle")
+                .text(edge.label);
+
+              // Split paths
+              ed.splits.forEach((sd) => {
+                const splitPath = g
+                  .append("path")
+                  .attr("class", `edge edge-${edge.type}`)
+                  .attr("d", sd.path)
+                  .attr("id", sd.pathId)
+                  .attr("data-type", edge.type)
+                  .attr("data-source", edge.source)
+                  .attr("data-target", edge.target)
+                  .attr("data-split-target", sd.targetId || "broker")
+                  .attr("stroke-width", sd.width)
+                  .attr("clip-path", `url(#${clipIdSplit})`);
+
+                const labelColor = sd.type === "broker" ? "#fbbf24" : "#10b981";
+                const labelText =
+                  sd.type === "broker" ? `${sd.label} commission` : sd.label;
+
+                const splitTgt = nodes.find((n) => n.id === sd.targetId) || tgt;
+                const targetRadius = splitTgt.radius || 55;
+                const shouldFlipSplit =
+                  splitTgt.x - ed.splitPoint.x < 0 ||
+                  (Math.abs(splitTgt.x - ed.splitPoint.x) < 50 &&
+                    splitTgt.y - ed.splitPoint.y < 0);
+
+                let splitTextPathId = sd.pathId;
+                if (shouldFlipSplit) {
+                  splitTextPathId = sd.pathId + "-text";
+                  g.append("path")
+                    .attr("id", splitTextPathId)
+                    .attr("d", reversePath(sd.path))
+                    .style("display", "none");
+                }
+
+                // Calculate path length to offset label towards split
+                const pathNode = splitPath.node();
+                const pathLength = pathNode ? pathNode.getTotalLength() : 200;
+                const halfTargetRadius = targetRadius / 2;
+                // Offset percentage: move center towards split by half target radius
+                const offsetPercent = shouldFlipSplit
+                  ? 50 + (halfTargetRadius / pathLength) * 100
+                  : 50 - (halfTargetRadius / pathLength) * 100;
+
+                g.append("text")
+                  .attr("class", "edge-label edge-split-label")
+                  .append("textPath")
+                  .attr("xlink:href", "#" + splitTextPathId)
+                  .attr("startOffset", `${offsetPercent}%`)
+                  .attr("text-anchor", "middle")
+                  .style("fill", labelColor)
+                  .text(labelText);
+              });
+            }
+          });
+
+          // Draw split handles after edges
+          drawSplitHandles();
+        }
+
+        function drawSplitHandles() {
+          splitHandleGroup.selectAll("*").remove();
+
+          currentSplitPositions.forEach((sp) => {
+            const handle = splitHandleGroup
+              .append("g")
+              .attr("class", "split-handle" + (sp.isLocked ? " locked" : ""))
+              .attr("transform", `translate(${sp.x}, ${sp.y})`)
+              .attr("data-edge-index", sp.edgeIndex);
+
+            // Invisible larger hit area for easier interaction (20px radius as requested)
+            handle
+              .append("circle")
+              .attr("r", 20)
+              .attr("fill", "transparent")
+              .attr("class", "hit-area");
+
+            // Visible handle circle
+            handle
+              .append("circle")
+              .attr("r", 8)
+              .attr("class", "visible-handle");
+
+            // Lock indicator for locked handles
+            if (sp.isLocked) {
+              handle.append("circle").attr("r", 4).attr("fill", "#fbbf24");
+            }
+
+            // Add drag behavior
+            const drag = d3
+              .drag()
+              .on("start", function (event) {
+                d3.select(this)
+                  .classed("dragging", true)
+                  .classed("visible", true);
+              })
+              .on("drag", function (event) {
+                const edgeIndex = +d3.select(this).attr("data-edge-index");
+                lockedSplitPositions[edgeIndex] = {
+                  x: event.x,
+                  y: event.y,
+                };
+                d3.select(this)
+                  .attr("transform", `translate(${event.x}, ${event.y})`)
+                  .classed("locked", true);
+
+                // Redraw only the edges (not handles) during drag for performance
+                redrawEdgesOnly();
+                updateVisibility();
+              })
+              .on("end", function (event) {
+                d3.select(this).classed("dragging", false);
+                // Full redraw to update handle positions
+                drawEdges();
+                updateVisibility();
+              });
+
+            handle.call(drag);
+
+            // Double-click to unlock
+            handle.on("dblclick", function (event) {
+              event.stopPropagation();
+              const edgeIndex = +d3.select(this).attr("data-edge-index");
+              delete lockedSplitPositions[edgeIndex];
+              drawEdges();
+              updateVisibility();
+            });
+          });
+        }
+
+        // Redraw edges only (without handles) for performance during drag
+        function redrawEdgesOnly() {
+          edgeGroup.selectAll("*").remove();
+          defs.selectAll("clipPath").remove();
+
+          edges.forEach((edge, i) => {
+            const ed = createSplitPath(edge, i);
+            const edgeGroupEl = edgeGroup
+              .append("g")
+              .attr("class", `edge-container edge-type-${edge.type}`);
+
+            if (!ed.splits) {
+              drawSimpleEdge(edgeGroupEl, ed, edge);
+            } else {
+              drawSplitEdge(edgeGroupEl, ed, edge);
+            }
+          });
+        }
+
+        // Helper function to draw simple edges (extracted for reuse)
+        function drawSimpleEdge(edgeGroupEl, ed, edge) {
+          edgeGroupEl
+            .append("path")
+            .attr("class", `edge edge-${edge.type}`)
+            .attr("d", ed.main)
+            .attr("id", ed.pathId)
+            .attr("data-type", edge.type)
+            .attr("data-source", edge.source)
+            .attr("data-target", edge.target)
+            .attr("stroke-width", ed.width);
+
+          const src = nodes.find((n) => n.id === edge.source);
+          const tgt = nodes.find((n) => n.id === edge.target);
+          const shouldFlip = shouldFlipTextPath(src, tgt);
+          let textPathId = ed.pathId;
+          if (shouldFlip) {
+            textPathId = ed.pathId + "-text";
+            edgeGroupEl
+              .append("path")
+              .attr("id", textPathId)
+              .attr("d", reversePath(ed.main))
+              .style("display", "none");
+          }
+
+          edgeGroupEl
+            .append("text")
+            .attr("class", "edge-label")
+            .append("textPath")
+            .attr("xlink:href", "#" + textPathId)
+            .attr("startOffset", "50%")
+            .attr("text-anchor", "middle")
+            .text(edge.label);
+        }
+
+        // Helper function to draw split edges (extracted for reuse)
+        function drawSplitEdge(edgeGroupEl, ed, edge) {
+          const g = edgeGroupEl
+            .append("g")
+            .attr("class", "edge-group edge-group-split")
+            .attr("data-source", edge.source)
+            .attr("data-target", edge.target);
+
+          const src = nodes.find((n) => n.id === edge.source);
+          const tgt = nodes.find((n) => n.id === edge.target);
+
+          // Create clip paths
+          const clipDist = 5000;
+          const perpX1 = ed.splitPoint.x + ed.perpendicular.x * clipDist;
+          const perpY1 = ed.splitPoint.y + ed.perpendicular.y * clipDist;
+          const perpX2 = ed.splitPoint.x - ed.perpendicular.x * clipDist;
+          const perpY2 = ed.splitPoint.y - ed.perpendicular.y * clipDist;
+          const backX1 = perpX1 - ed.tangent.x * clipDist;
+          const backY1 = perpY1 - ed.tangent.y * clipDist;
+          const backX2 = perpX2 - ed.tangent.x * clipDist;
+          const backY2 = perpY2 - ed.tangent.y * clipDist;
+          const forwardX1 = perpX1 + ed.tangent.x * clipDist;
+          const forwardY1 = perpY1 + ed.tangent.y * clipDist;
+          const forwardX2 = perpX2 + ed.tangent.x * clipDist;
+          const forwardY2 = perpY2 + ed.tangent.y * clipDist;
+
+          const clipIdMain = `clip-main-${ed.pathId}`;
+          defs
+            .append("clipPath")
+            .attr("id", clipIdMain)
+            .append("polygon")
+            .attr(
+              "points",
+              `${backX1},${backY1} ${backX2},${backY2} ${perpX2},${perpY2} ${perpX1},${perpY1}`,
+            );
+
+          const clipIdSplit = `clip-split-${ed.pathId}`;
+          defs
+            .append("clipPath")
+            .attr("id", clipIdSplit)
+            .append("polygon")
+            .attr(
+              "points",
+              `${perpX1},${perpY1} ${perpX2},${perpY2} ${forwardX2},${forwardY2} ${forwardX1},${forwardY1}`,
+            );
+
+          // Main path
+          g.append("path")
+            .attr("class", `edge edge-${edge.type}`)
+            .attr("d", ed.main)
+            .attr("id", ed.pathId)
+            .attr("data-type", edge.type)
+            .attr("data-source", edge.source)
+            .attr("data-target", edge.target)
+            .attr("stroke-width", ed.mainWidth)
+            .attr("clip-path", `url(#${clipIdMain})`);
+
+          const shouldFlip = shouldFlipTextPath(src, tgt);
+          let mainTextPathId = ed.pathId;
+          if (shouldFlip) {
+            mainTextPathId = ed.pathId + "-text";
+            g.append("path")
+              .attr("id", mainTextPathId)
+              .attr("d", reversePath(ed.main))
+              .style("display", "none");
+          }
+
+          g.append("text")
+            .attr("class", "edge-label")
+            .append("textPath")
+            .attr("xlink:href", "#" + mainTextPathId)
+            .attr("startOffset", "50%")
+            .attr("text-anchor", "middle")
+            .text(edge.label);
+
+          // Split paths
+          ed.splits.forEach((sd) => {
+            const splitPath = g
+              .append("path")
+              .attr("class", `edge edge-${edge.type}`)
+              .attr("d", sd.path)
+              .attr("id", sd.pathId)
+              .attr("data-type", edge.type)
+              .attr("data-source", edge.source)
+              .attr("data-target", edge.target)
+              .attr("data-split-target", sd.targetId || "broker")
+              .attr("stroke-width", sd.width)
+              .attr("clip-path", `url(#${clipIdSplit})`);
+
+            const labelColor = sd.type === "broker" ? "#fbbf24" : "#10b981";
+            const labelText =
+              sd.type === "broker" ? `${sd.label} commission` : sd.label;
+
+            const splitTgt = nodes.find((n) => n.id === sd.targetId) || tgt;
+            const targetRadius = splitTgt.radius || 55;
+            const shouldFlipSplit =
+              splitTgt.x - ed.splitPoint.x < 0 ||
+              (Math.abs(splitTgt.x - ed.splitPoint.x) < 50 &&
+                splitTgt.y - ed.splitPoint.y < 0);
+
+            let splitTextPathId = sd.pathId;
+            if (shouldFlipSplit) {
+              splitTextPathId = sd.pathId + "-text";
+              g.append("path")
+                .attr("id", splitTextPathId)
+                .attr("d", reversePath(sd.path))
+                .style("display", "none");
+            }
+
+            // Calculate path length to offset label towards split
+            const pathNode = splitPath.node();
+            const pathLength = pathNode ? pathNode.getTotalLength() : 200;
+            const halfTargetRadius = targetRadius / 2;
+            // Offset percentage: move center towards split by half target radius
+            const offsetPercent = shouldFlipSplit
+              ? 50 + (halfTargetRadius / pathLength) * 100
+              : 50 - (halfTargetRadius / pathLength) * 100;
+
+            g.append("text")
+              .attr("class", "edge-label edge-split-label")
+              .append("textPath")
+              .attr("xlink:href", "#" + splitTextPathId)
+              .attr("startOffset", `${offsetPercent}%`)
+              .attr("text-anchor", "middle")
+              .style("fill", labelColor)
+              .text(labelText);
+          });
+        }
+
+        function drawNodes() {
+          nodeGroup.selectAll(".node").remove();
+
+          const nodeElements = nodeGroup
+            .selectAll(".node")
+            .data(nodes)
+            .enter()
+            .append("g")
+            .attr(
+              "class",
+              (d) => "node" + (d.id === selectedNodeId ? " selected" : ""),
+            )
+            .attr("transform", (d) => `translate(${d.x}, ${d.y})`);
+
+          nodeElements
+            .append("circle")
+            .attr("r", (d) => d.radius || 55)
+            .attr("fill", (d) => d.color);
+
+          nodeElements
+            .append("text")
+            .attr("dy", ".35em")
+            .text((d) => d.label.split("\n")[0])
+            .each(function (d) {
+              if (d.label.includes("\n")) {
+                const text = d3.select(this);
+                const lines = d.label.split("\n");
+                text.text("");
+                lines.forEach((line, i) => {
+                  text
+                    .append("tspan")
+                    .attr("x", 0)
+                    .attr("dy", i === 0 ? "-0.4em" : "1.1em")
+                    .text(line);
+                });
+              }
+            });
+
+          // Add drag behavior
+          const drag = d3
+            .drag()
+            .on("start", function (event, d) {
+              d3.select(this).classed("dragging", true);
+            })
+            .on("drag", function (event, d) {
+              d.x = Math.max(
+                padding.left,
+                Math.min(width - padding.right, event.x),
+              );
+              d.y = Math.max(
+                padding.top,
+                Math.min(height - padding.bottom, event.y),
+              );
+              d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
+              drawEdges();
+              drawCompanyNodes();
+              updateVisibility();
+            })
+            .on("end", function (event, d) {
+              d3.select(this).classed("dragging", false);
+            });
+
+          nodeElements.call(drag);
+
+          // Click to select
+          nodeElements.on("click", function (event, d) {
+            event.stopPropagation();
+            selectedNodeId = selectedNodeId === d.id ? null : d.id;
+            nodeGroup
+              .selectAll(".node")
+              .classed("selected", (n) => n.id === selectedNodeId);
+            updateDetailsPanel(d.id === selectedNodeId ? d : null);
+          });
+
+          // Hover effects with cascading highlight through splits
+          nodeElements
+            .on("mouseover", function (event, d) {
+              d3.select(this).classed("highlighted", true);
+
+              // Collect all nodes whose outbound edges should highlight
+              const outboundHighlightNodes = new Set([d.id]);
+
+              // Find nodes that receive flow from hovered node via splits
+              // These nodes should also have their outbound edges highlighted
+              edges.forEach((e) => {
+                if (e.source === d.id) {
+                  // Split targets get their outbound highlighted too
+                  if (e.split) {
+                    e.split.forEach((s) =>
+                      outboundHighlightNodes.add(s.target),
+                    );
+                  }
+                  // broker commission target gets outbound highlighted
+                  if (e.brokerCommission) {
+                    outboundHighlightNodes.add("broker");
+                  }
+                }
+              });
+
+              // Highlight edges based on the cascade rules
+              edgeGroup.selectAll(".edge").each(function () {
+                const el = d3.select(this);
+                const src = el.attr("data-source");
+                const tgt = el.attr("data-target");
+                const splitTgt = el.attr("data-split-target");
+
+                let shouldHighlight = false;
+
+                // 1. Edges where hovered node is source (outbound from hovered)
+                if (src === d.id) {
+                  shouldHighlight = true;
+                }
+
+                // 2. Edges where hovered node is target (inbound to hovered)
+                if (tgt === d.id) {
+                  shouldHighlight = true;
+                }
+
+                // 3. Split paths targeting the hovered node
+                if (splitTgt === d.id) {
+                  shouldHighlight = true;
+                }
+
+                // 4. Outbound edges from nodes that receive split flow from hovered node
+                if (outboundHighlightNodes.has(src) && src !== d.id) {
+                  shouldHighlight = true;
+                }
+
+                el.classed("highlighted", shouldHighlight);
+              });
+            })
+            .on("mouseout", function () {
+              d3.select(this).classed("highlighted", false);
+              edgeGroup.selectAll(".edge").classed("highlighted", false);
+            });
+        }
+
+        // Update details panel with selected node info
+        function updateDetailsPanel(node) {
+          const detailsPanel = d3.select("#node-details");
+          const inboundPanel = d3.select("#inbound-connections");
+          const outboundPanel = d3.select("#outbound-connections");
+
+          if (!node) {
+            detailsPanel.html(
+              '<div class="no-selection">Click a node to see details</div>',
+            );
+            inboundPanel.html(
+              '<div class="no-selection">Click a node to see connections</div>',
+            );
+            outboundPanel.html(
+              '<div class="no-selection">Click a node to see connections</div>',
+            );
+            return;
+          }
+
+          // Node details
+          const companies = companyNodes.filter((c) => c.parent === node.id);
+          const companyList =
+            companies.length > 0
+              ? companies.map((c) => c.label).join(", ")
+              : "N/A";
+
+          detailsPanel.html(`
+                <div class="node-info">
+                    <div class="label">Name</div>
+                    <div class="value" style="color: ${node.color}; font-weight: bold;">${node.label.replace("\n", " ")}</div>
+                    
+                    <div class="label">Role</div>
+                    <div class="value">${node.role || "N/A"}</div>
+                    
+                    <div class="label">Description</div>
+                    <div class="value">${node.description || "N/A"}</div>
+                    
+                    <div class="label">Data Types</div>
+                    <div class="value">${node.dataTypes || "N/A"}</div>
+                    
+                    <div class="label">Example Companies</div>
+                    <div class="value">${companyList}</div>
+                </div>
+            `);
+
+          // Helper to get node label by id
+          function getNodeLabel(id) {
+            const n = nodes.find((n) => n.id === id);
+            return n ? n.label.replace("\n", " ") : id;
+          }
+
+          // Inbound connections
+          const inbound = [];
+          edges.forEach((e) => {
+            // Direct inbound
+            if (e.target === node.id) {
+              const conn = {
+                type: e.type,
+                from: e.source,
+                label: e.label,
+                splits: [],
+              };
+              // Check for splits going elsewhere
+              if (e.split) {
+                e.split.forEach((s) => {
+                  conn.splits.push({
+                    target: s.target,
+                    ratio: s.label || `${Math.round(s.ratio * 100)}%`,
+                  });
+                });
+              }
+              if (e.brokerCommission) {
+                conn.splits.push({
+                  target: "broker",
+                  ratio: `${Math.round(e.brokerCommission * 100)}%`,
+                  isCommission: true,
+                });
+              }
+              inbound.push(conn);
+            }
+            // Inbound via split
+            if (e.split && e.split.some((s) => s.target === node.id)) {
+              const splitInfo = e.split.find((s) => s.target === node.id);
+              inbound.push({
+                type: e.type,
+                from: e.source,
+                label: e.label,
+                viaSplit: true,
+                splitRatio:
+                  splitInfo.label || `${Math.round(splitInfo.ratio * 100)}%`,
+              });
+            }
+            // Inbound via broker commission
+            if (e.brokerCommission && node.id === "broker") {
+              inbound.push({
+                type: e.type,
+                from: e.source,
+                label: e.label,
+                viaSplit: true,
+                splitRatio: `${Math.round(e.brokerCommission * 100)}%`,
+                isCommission: true,
+              });
+            }
+          });
+
+          if (inbound.length === 0) {
+            inboundPanel.html(
+              '<div class="no-selection">No inbound connections</div>',
+            );
+          } else {
+            let html = '<ul class="connection-list">';
+            inbound.forEach((conn) => {
+              html += `<li class="connection-item">
+                        <span class="edge-type ${conn.type}">${conn.type}</span>
+                        <span class="node-name">${getNodeLabel(conn.from)}</span>
+                        <span class="edge-label">${conn.label}${conn.viaSplit ? ` <span class="split-percent">(${conn.splitRatio}${conn.isCommission ? " commission" : ""})</span>` : ""}</span>`;
+              if (conn.splits && conn.splits.length > 0) {
+                html += '<div class="split-list">';
+                conn.splits.forEach((s) => {
+                  html += `<div class="split-item">↳ <span class="split-percent">${s.ratio}</span> → <span class="split-target">${getNodeLabel(s.target)}</span>${s.isCommission ? " (commission)" : ""}</div>`;
+                });
+                html += "</div>";
+              }
+              html += "</li>";
+            });
+            html += "</ul>";
+            inboundPanel.html(html);
+          }
+
+          // Outbound connections
+          const outbound = [];
+          edges.forEach((e) => {
+            if (e.source === node.id) {
+              const conn = {
+                type: e.type,
+                to: e.target,
+                label: e.label,
+                splits: [],
+              };
+              if (e.split) {
+                e.split.forEach((s) => {
+                  conn.splits.push({
+                    target: s.target,
+                    ratio: s.label || `${Math.round(s.ratio * 100)}%`,
+                  });
+                });
+              }
+              if (e.brokerCommission) {
+                conn.splits.push({
+                  target: "broker",
+                  ratio: `${Math.round(e.brokerCommission * 100)}%`,
+                  isCommission: true,
+                });
+                // If no manual splits, the remainder goes to original target
+                if (!e.split) {
+                  conn.splits.push({
+                    target: e.target,
+                    ratio: `${Math.round((1 - e.brokerCommission) * 100)}%`,
+                  });
+                }
+              }
+              outbound.push(conn);
+            }
+          });
+
+          if (outbound.length === 0) {
+            outboundPanel.html(
+              '<div class="no-selection">No outbound connections</div>',
+            );
+          } else {
+            let html = '<ul class="connection-list">';
+            outbound.forEach((conn) => {
+              html += `<li class="connection-item">
+                        <span class="edge-type ${conn.type}">${conn.type}</span>
+                        <span class="node-name">${getNodeLabel(conn.to)}</span>
+                        <span class="edge-label">${conn.label}</span>`;
+              if (conn.splits && conn.splits.length > 0) {
+                html += '<div class="split-list">';
+                conn.splits.forEach((s) => {
+                  html += `<div class="split-item">↳ <span class="split-percent">${s.ratio}</span> → <span class="split-target">${getNodeLabel(s.target)}</span>${s.isCommission ? " (commission)" : ""}</div>`;
+                });
+                html += "</div>";
+              }
+              html += "</li>";
+            });
+            html += "</ul>";
+            outboundPanel.html(html);
+          }
+        }
+
+        // Calculate company node positions around parent, avoiding outbound edges
+        function calculateCompanyPositions() {
+          const showCompanies = d3
+            .select("#show-companies")
+            .property("checked");
+
+          nodes.forEach((parent) => {
+            const companies = companyNodes.filter(
+              (c) => c.parent === parent.id,
+            );
+            const count = companies.length;
+            if (count === 0) return;
+
+            // Find outbound edge directions from this parent
+            const outboundAngles = [];
+            edges.forEach((e) => {
+              let targetNode = null;
+              if (e.source === parent.id) {
+                targetNode = nodes.find((n) => n.id === e.target);
+              }
+              if (targetNode) {
+                const angle = Math.atan2(
+                  targetNode.y - parent.y,
+                  targetNode.x - parent.x,
+                );
+                outboundAngles.push(angle);
+              }
+              // Also check split targets
+              if (e.split) {
+                e.split.forEach((s) => {
+                  if (s.target === parent.id) return;
+                  const splitTarget = nodes.find((n) => n.id === s.target);
+                  if (splitTarget && e.target === parent.id) {
+                    // This is an inbound edge that splits to other targets
+                  }
+                });
+              }
+            });
+
+            // Also check inbound edges
+            edges.forEach((e) => {
+              if (e.target === parent.id) {
+                const sourceNode = nodes.find((n) => n.id === e.source);
+                if (sourceNode) {
+                  const angle = Math.atan2(
+                    sourceNode.y - parent.y,
+                    sourceNode.x - parent.x,
+                  );
+                  outboundAngles.push(angle);
+                }
+              }
+            });
+
+            // Find the largest gap between edges to place company nodes
+            const parentRadius = parent.radius || 55;
+            const spreadRadius = parentRadius + 70; // Distance from parent center
+
+            // Default: spread on the side opposite to most edges
+            let bestStartAngle = Math.PI; // Default to left side
+            let bestSpread = Math.PI * 0.8; // Spread over ~144 degrees
+
+            if (outboundAngles.length > 0) {
+              // Sort angles and find the largest gap
+              outboundAngles.sort((a, b) => a - b);
+
+              let maxGap = 0;
+              let maxGapStart = 0;
+
+              for (let i = 0; i < outboundAngles.length; i++) {
+                const current = outboundAngles[i];
+                const next = outboundAngles[(i + 1) % outboundAngles.length];
+                let gap = next - current;
+                if (gap < 0) gap += Math.PI * 2;
+
+                if (gap > maxGap) {
+                  maxGap = gap;
+                  maxGapStart = current;
+                }
+              }
+
+              // Position company nodes in the middle of the largest gap
+              bestStartAngle = maxGapStart + maxGap / 2;
+              bestSpread = Math.min(maxGap * 0.7, Math.PI * 0.9); // Use 70% of the gap
+            }
+
+            companies.forEach((c, i) => {
+              const angleRange = count > 1 ? bestSpread : 0;
+              const angle =
+                bestStartAngle -
+                angleRange / 2 +
+                (count > 1 ? (i / (count - 1)) * angleRange : 0);
+              c.x = parent.x + Math.cos(angle) * spreadRadius;
+              c.y = parent.y + Math.sin(angle) * spreadRadius;
+              c.visible = showCompanies;
+            });
+          });
+        }
+
+        // Draw company nodes and their edges
+        function drawCompanyNodes() {
+          calculateCompanyPositions();
+
+          const showCompanies = d3
+            .select("#show-companies")
+            .property("checked");
+
+          // Remove existing company elements
+          companyNodeGroup.selectAll(".company-node").remove();
+          companyEdgeGroup.selectAll(".company-edge").remove();
+
+          if (!showCompanies) return;
+
+          // First pass: create nodes to measure text
+          const companyElements = companyNodeGroup
+            .selectAll(".company-node")
+            .data(companyNodes)
+            .enter()
+            .append("g")
+            .attr("class", "company-node visible")
+            .attr("transform", (d) => `translate(${d.x}, ${d.y})`);
+
+          // Add text first to measure it
+          const textElements = companyElements
+            .append("text")
+            .attr("dy", ".35em")
+            .attr("font-size", "11px")
+            .attr("fill", "#f1f5f9")
+            .text((d) => d.label);
+
+          // Measure text and add background rectangles
+          companyElements.each(function (d) {
+            const g = d3.select(this);
+            const text = g.select("text");
+            const bbox = text.node().getBBox();
+
+            const paddingX = 10;
+            const paddingY = 6;
+            const rectWidth = bbox.width + paddingX * 2;
+            const rectHeight = bbox.height + paddingY * 2;
+
+            // Store dimensions for edge connection points
+            d.rectWidth = rectWidth;
+            d.rectHeight = rectHeight;
+
+            // Insert rect before text (so text is on top)
+            g.insert("rect", "text")
+              .attr("x", -rectWidth / 2)
+              .attr("y", -rectHeight / 2)
+              .attr("width", rectWidth)
+              .attr("height", rectHeight)
+              .attr("rx", 6)
+              .attr("ry", 6)
+              .attr("fill", d.color)
+              .attr("opacity", 0.8);
+          });
+
+          // Draw company edges (connect to edge of rectangle)
+          companyNodes.forEach((cn) => {
+            const parent = nodes.find((n) => n.id === cn.parent);
+            if (!parent) return;
+
+            // Calculate connection point on the rectangle edge closest to parent
+            const dx = parent.x - cn.x;
+            const dy = parent.y - cn.y;
+            const angle = Math.atan2(dy, dx);
+
+            // Find intersection with rectangle
+            const halfW = (cn.rectWidth || 50) / 2;
+            const halfH = (cn.rectHeight || 20) / 2;
+
+            let edgeX, edgeY;
+            const tanAngle = Math.abs(Math.tan(angle));
+
+            if (tanAngle * halfW <= halfH) {
+              // Intersects left or right edge
+              edgeX = cn.x + (dx > 0 ? halfW : -halfW);
+              edgeY = cn.y + (dx > 0 ? halfW : -halfW) * Math.tan(angle);
+            } else {
+              // Intersects top or bottom edge
+              edgeX = cn.x + (dy > 0 ? halfH : -halfH) / Math.tan(angle);
+              edgeY = cn.y + (dy > 0 ? halfH : -halfH);
+            }
+
+            companyEdgeGroup
+              .append("line")
+              .attr("class", "company-edge visible")
+              .attr("x1", parent.x)
+              .attr("y1", parent.y)
+              .attr("x2", edgeX)
+              .attr("y2", edgeY);
+          });
+
+          // Drag behavior for company nodes
+          const drag = d3.drag().on("drag", function (event, d) {
+            d.x = event.x;
+            d.y = event.y;
+            d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
+
+            // Redraw company edges
+            companyEdgeGroup.selectAll(".company-edge").remove();
+            companyNodes.forEach((cn) => {
+              const p = nodes.find((n) => n.id === cn.parent);
+              if (!p) return;
+
+              const dx = p.x - cn.x;
+              const dy = p.y - cn.y;
+              const angle = Math.atan2(dy, dx);
+
+              const halfW = (cn.rectWidth || 50) / 2;
+              const halfH = (cn.rectHeight || 20) / 2;
+
+              let edgeX, edgeY;
+              const tanAngle = Math.abs(Math.tan(angle));
+
+              if (tanAngle * halfW <= halfH) {
+                edgeX = cn.x + (dx > 0 ? halfW : -halfW);
+                edgeY = cn.y + (dx > 0 ? halfW : -halfW) * Math.tan(angle);
+              } else {
+                edgeX = cn.x + (dy > 0 ? halfH : -halfH) / Math.tan(angle);
+                edgeY = cn.y + (dy > 0 ? halfH : -halfH);
+              }
+
+              companyEdgeGroup
+                .append("line")
+                .attr("class", "company-edge visible")
+                .attr("x1", p.x)
+                .attr("y1", p.y)
+                .attr("x2", edgeX)
+                .attr("y2", edgeY);
+            });
+          });
+
+          companyElements.call(drag);
+        }
+
+        // ============================================
+        // VISIBILITY CONTROLS
+        // ============================================
+
+        function updateVisibility() {
+          const checks = {
+            data: d3.select("#show-data").property("checked"),
+            revenue: d3.select("#show-revenue").property("checked"),
+            oneoff: d3.select("#show-oneoff").property("checked"),
+            product: d3.select("#show-product").property("checked"),
+            potential: d3.select("#show-potential").property("checked"),
+          };
+
+          edges.forEach((e, i) => {
+            const show = checks[e.type];
+            const pid = `edge-path-${i}`;
+            edgeGroup
+              .selectAll(`#${pid}`)
+              .style("display", show ? null : "none");
+            edgeGroup
+              .selectAll(".edge-label")
+              .filter(function () {
+                const tp = d3.select(this).select("textPath");
+                return (
+                  tp.size() > 0 &&
+                  (tp.attr("xlink:href") === "#" + pid ||
+                    tp.attr("xlink:href") === "#" + pid + "-text")
+                );
+              })
+              .style("display", show ? null : "none");
+
+            if (e.split || e.brokerCommission) {
+              if (e.brokerCommission) {
+                // broker commission path
+                const upid = `${pid}-broker`;
+                edgeGroup
+                  .selectAll(`#${upid}`)
+                  .style("display", show ? null : "none");
+                edgeGroup
+                  .selectAll(".edge-label")
+                  .filter(function () {
+                    const tp = d3.select(this).select("textPath");
+                    return (
+                      tp.size() > 0 &&
+                      (tp.attr("xlink:href") === "#" + upid ||
+                        tp.attr("xlink:href") === "#" + upid + "-text")
+                    );
+                  })
+                  .style("display", show ? null : "none");
+
+                // If no manual splits, there's also a -target path for the remainder
+                if (!e.split) {
+                  const tpid = `${pid}-target`;
+                  edgeGroup
+                    .selectAll(`#${tpid}`)
+                    .style("display", show ? null : "none");
+                  edgeGroup
+                    .selectAll(".edge-label")
+                    .filter(function () {
+                      const tp = d3.select(this).select("textPath");
+                      return (
+                        tp.size() > 0 &&
+                        (tp.attr("xlink:href") === "#" + tpid ||
+                          tp.attr("xlink:href") === "#" + tpid + "-text")
+                      );
+                    })
+                    .style("display", show ? null : "none");
+                }
+              }
+              if (e.split) {
+                e.split.forEach((_, j) => {
+                  const spid = `${pid}-split-${j}`;
+                  edgeGroup
+                    .selectAll(`#${spid}`)
+                    .style("display", show ? null : "none");
+                  edgeGroup
+                    .selectAll(".edge-label")
+                    .filter(function () {
+                      const tp = d3.select(this).select("textPath");
+                      return (
+                        tp.size() > 0 &&
+                        (tp.attr("xlink:href") === "#" + spid ||
+                          tp.attr("xlink:href") === "#" + spid + "-text")
+                      );
+                    })
+                    .style("display", show ? null : "none");
+                });
+              }
+            }
+          });
+        }
+
+        // ============================================
+        // RESET & ANIMATION
+        // ============================================
+
+        d3.select("#reset-layout").on("click", function () {
+          // Clear locked split positions
+          Object.keys(lockedSplitPositions).forEach((key) => {
+            delete lockedSplitPositions[key];
+          });
+
+          nodes.forEach((n) => {
+            n.x = initialPositions[n.id].x;
+            n.y = initialPositions[n.id].y;
+          });
+          nodeGroup
+            .selectAll(".node")
+            .transition()
+            .duration(500)
+            .attr("transform", (d) => `translate(${d.x}, ${d.y})`);
+          setTimeout(() => {
+            drawEdges();
+            drawCompanyNodes();
+            updateVisibility();
+          }, 500);
+        });
+
+        d3.selectAll('.controls input[type="checkbox"]').on(
+          "change",
+          function () {
+            updateVisibility();
+            drawCompanyNodes();
+          },
+        );
+
+        // Click on background to deselect
+        svg.on("click", function () {
+          selectedNodeId = null;
+          nodeGroup.selectAll(".node").classed("selected", false);
+          updateDetailsPanel(null);
+        });
+
+        // Initial draw
+        drawEdges();
+        drawNodes();
+        drawCompanyNodes();
+        updateVisibility();
+
+        // Flow animation
+        function animateFlows() {
+          if (!d3.select("#animate-flows").property("checked")) {
+            setTimeout(animateFlows, 1000);
+            return;
+          }
+
+          edgeGroup
+            .selectAll(".edge")
+            .filter(function () {
+              return d3.select(this).style("display") !== "none";
+            })
+            .each(function () {
+              const node = this;
+              const len = node.getTotalLength();
+              const color = d3.select(this).style("stroke");
+              const width =
+                parseFloat(d3.select(this).attr("stroke-width")) || 3;
+              const radius = Math.max(2, Math.min(6, width * 0.4));
+
+              edgeGroup
+                .append("circle")
+                .attr("class", "flow-particle")
+                .attr("r", radius)
+                .attr("fill", color)
+                .transition()
+                .duration(3000)
+                .ease(d3.easeLinear)
+                .attrTween("transform", () => (t) => {
+                  const pt = node.getPointAtLength(t * len);
+                  return `translate(${pt.x}, ${pt.y})`;
+                })
+                .styleTween("opacity", () => (t) => {
+                  if (t < 0.1) return t / 0.1;
+                  if (t > 0.9) return (1 - t) / 0.1;
+                  return 1;
+                })
+                .remove();
+            });
+
+          setTimeout(animateFlows, 1000);
+        }
+
+        setTimeout(animateFlows, 500);
+
+        // Handle window resize
+        window.addEventListener("resize", function () {
+          const newWidth = window.innerWidth;
+          const newHeight = window.innerHeight;
+          svg.attr("width", newWidth).attr("height", newHeight);
+        });
+      });
+    </script>
+  </body>
+</html>
