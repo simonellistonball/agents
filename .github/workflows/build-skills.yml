@@ -1,0 +1,119 @@
+name: Build and Release Skills
+
+on:
+  push:
+    branches: [main]
+    paths: ['skills/**']
+  workflow_dispatch:
+    inputs:
+      rebuild_all:
+        description: 'Rebuild and release all skills (not just changed ones)'
+        type: boolean
+        default: false
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect skills and build zips
+        id: build
+        env:
+          REBUILD_ALL: ${{ inputs.rebuild_all }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          # Get changed files (unless rebuilding all)
+          if [ "$REBUILD_ALL" = "true" ]; then
+            echo "Force rebuilding all skills"
+            check_changes=false
+          else
+            check_changes=true
+            if git rev-parse HEAD~1 >/dev/null 2>&1; then
+              changed_files=$(git diff --name-only HEAD~1 HEAD -- skills/)
+            else
+              changed_files=$(git ls-tree -r --name-only HEAD -- skills/)
+            fi
+          fi
+
+          built_count=0
+
+          # Find all SKILL.md files to discover skills
+          while IFS= read -r skill_md; do
+            skill_dir=$(dirname "$skill_md")
+
+            # Find package root: walk up until we find README.md or hit skills/
+            pkg_root="$skill_dir"
+            while [ "$pkg_root" != "skills" ] && [ ! -f "$pkg_root/README.md" ]; do
+              pkg_root=$(dirname "$pkg_root")
+            done
+            # If we hit skills/ without finding README.md, use SKILL.md's own directory
+            if [ "$pkg_root" = "skills" ]; then
+              pkg_root="$skill_dir"
+            fi
+
+            skill_name=$(basename "$pkg_root")
+
+            # Skip if already processed (dedup for same package root)
+            if [ -f "dist/${skill_name}.zip" ]; then
+              continue
+            fi
+
+            # Check if this skill changed
+            if [ "$check_changes" = "true" ]; then
+              if ! echo "$changed_files" | grep -q "^${pkg_root}/"; then
+                continue
+              fi
+            fi
+
+            echo "::group::Building ${skill_name} from ${pkg_root}"
+
+            # Create zip from package root, excluding any pre-existing .zip files
+            (cd "$pkg_root" && zip -r "${GITHUB_WORKSPACE}/dist/${skill_name}.zip" . -x "*.zip")
+
+            echo "::endgroup::"
+            built_count=$((built_count + 1))
+
+          done < <(find skills -name "SKILL.md" -type f | sort)
+
+          echo "built=${built_count}" >> "$GITHUB_OUTPUT"
+          echo "Built ${built_count} skill(s)"
+
+      - name: Create releases
+        if: steps.build.outputs.built != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          short_sha=$(git rev-parse --short HEAD)
+          repo_url=$(gh browse -n)
+
+          for zip in dist/*.zip; do
+            [ -f "$zip" ] || continue
+            skill_name=$(basename "$zip" .zip)
+            tag="skill/${skill_name}"
+
+            echo "::group::Releasing ${skill_name}"
+
+            # Remove existing release and tag if present
+            gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true
+
+            gh release create "$tag" \
+              "$zip" \
+              --title "${skill_name}" \
+              --notes "## ${skill_name}
+
+          Download **${skill_name}.zip** and import into Claude Desktop as a skill.
+
+          Built from [\`${short_sha}\`](${repo_url}/commit/$(git rev-parse HEAD))." \
+              --latest=false
+
+            echo "Released: ${skill_name}"
+            echo "::endgroup::"
+          done
