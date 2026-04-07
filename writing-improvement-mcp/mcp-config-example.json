@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "writing-improvement": {
+      "command": "python3",
+      "args": ["/Users/simon.elliston.ball/agents/writing-improvement-mcp/server.py"],
+      "env": {
+        "PYTHONPATH": "/Users/simon.elliston.ball/agents/writing-improvement-mcp"
+      }
+    }
+  }
+}
