@@ -22,6 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+          submodules: false
 
       - name: Detect skills and build zips
         id: build
@@ -31,7 +32,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist
 
-          # Get changed files (unless rebuilding all)
+          # Get changed files (unless rebuilding all or manual dispatch)
           if [ "$REBUILD_ALL" = "true" ]; then
             echo "Force rebuilding all skills"
             check_changes=false
@@ -41,6 +42,12 @@ jobs:
               changed_files=$(git diff --name-only HEAD~1 HEAD -- skills/)
             else
               changed_files=$(git ls-tree -r --name-only HEAD -- skills/)
+            fi
+
+            # If no skill source files changed, rebuild all (handles first run / zip-only diffs)
+            if [ -z "$changed_files" ] || ! echo "$changed_files" | grep -qv '\.zip$'; then
+              echo "No skill source changes detected, building all skills"
+              check_changes=false
             fi
           fi
 
