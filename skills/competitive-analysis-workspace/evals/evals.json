@@ -1,0 +1,26 @@
+{
+  "skill_name": "competitive-analysis",
+  "evals": [
+    {
+      "id": 1,
+      "name": "unreal-engine-analysis",
+      "prompt": "Analyze Unreal Engine as a competitor. I want to understand their pricing model and how their developer experience compares to ours.",
+      "expected_output": "A structured competitor profile for Epic Games / Unreal Engine saved to .competitive-intel/competitors/. Should ask about research depth and focus area. Profile should have YAML frontmatter, inline source citations, archived source pages, sections covering pricing (royalty model), features, leadership, analyst coverage, financials (Epic is private — funding/revenue estimates), press releases, and a Sources list with URLs and fetch dates. Should handle Epic being a private company (search for funding, revenue estimates from news, not SEC filings).",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "godot-comparison",
+      "prompt": "Compare Godot Engine against us. How does the open source model threaten our position?",
+      "expected_output": "Should detect that user's product (Unity) isn't yet stored, ask about it, then save a my-product profile. Competitor profile for Godot created. Comparison report in .competitive-intel/comparisons/ with feature table, where-we-win/lose, strategic implications of open source vs commercial model. Source citations throughout. Should handle that Godot is open source / community-funded differently from a company.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "game-engine-landscape",
+      "prompt": "Show me the competitive landscape for game engines. Who else should we be watching?",
+      "expected_output": "A landscape.md synthesizing all known competitors — Unreal, Godot, plus others the skill discovers (e.g., Cocos, Amazon Lumberyard/O3DE, CryEngine, Bevy, Defold). Market positioning, trends (open source growth, AI integration, mobile/web engines), gaps and opportunities for Unity. Should read existing profiles if they exist from prior evals.",
+      "files": []
+    }
+  ]
+}

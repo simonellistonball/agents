@@ -7,7 +7,7 @@ description: >
   Handles relative times (tomorrow, next Monday, in 2 hours) and absolute times
   (at 3pm, on April 15th).
 tools:
-  - Agent
+  - Bash
   - AskUserQuestion
 ---
 
@@ -26,121 +26,94 @@ Create reminders in the macOS Reminders app from natural language requests.
 
 ### Step 1: Extract What and When
 
-Before delegating, extract two things from the user's message:
+Extract two things from the user's message:
 
 1. **What** — the reminder text (what they need to be reminded about)
 2. **When** — the date/time for the reminder
 
-If either is missing, use AskUserQuestion to ask before delegating:
+If either is missing, use AskUserQuestion to ask before proceeding:
 
 - Missing time: "When should I remind you? (e.g., tomorrow at 9am, next Monday, in 2 hours)"
 - Missing what: "What should the reminder say?"
 
-### Step 2: Delegate to Haiku Subagent
+### Step 2: Resolve the Date
 
-Once you have both **what** and **when**, spawn a Haiku subagent to do the work. This is a mechanical task (date math + AppleScript) that doesn't need a large model.
+Resolve the user's time expression into concrete numeric values: YEAR, MONTH, DAY, HOUR, MINUTE. Do this yourself — no tools needed, just arithmetic from the current date.
 
-Use the Agent tool with these parameters:
+**Resolution rules (default time is 9:00 AM when not specified):**
 
-- **model:** `haiku`
-- **description:** "Create macOS reminder"
-- **prompt:** Use the template below, filling in the user's request details and today's date/time.
+| User says | Interpretation |
+|-----------|---------------|
+| "tomorrow" | Tomorrow at 9:00 AM |
+| "tomorrow morning" | Tomorrow at 9:00 AM |
+| "tomorrow afternoon" | Tomorrow at 2:00 PM |
+| "tomorrow evening" | Tomorrow at 6:00 PM |
+| "next Monday" (or any weekday) | The coming occurrence of that day at 9:00 AM |
+| "in X hours/minutes" | Current time + X |
+| "at 3pm" / "at 15:00" | Today if that time hasn't passed, otherwise tomorrow |
+| "on April 15" / "on 4/15" | That date at 9:00 AM |
+| "on April 15 at 2pm" | That specific date and time |
+| "end of day" / "EOD" | Today at 5:00 PM |
+| "this weekend" | Saturday at 10:00 AM |
+| "next week" | Next Monday at 9:00 AM |
+| "in a few days" | 3 days from now at 9:00 AM |
+| "later today" | 2 hours from now |
 
-#### Agent Prompt Template
+If the resolved date is in the past, warn the user and ask if they meant a future date.
 
-Fill in {REMINDER_TEXT}, {TIME_EXPRESSION}, and {CURRENT_DATETIME} then pass as the agent prompt:
+### Step 3: Create the Reminder
 
-~~~
-Create a reminder in the macOS Reminders app. You MUST actually run the commands using the Bash tool. Do NOT just describe what you would do — execute every step.
+Run the `create-reminder.sh` script bundled alongside this SKILL.md. It takes the date components and reminder text as arguments — no inline scripting needed.
 
-Reminder: {REMINDER_TEXT}
-When: {TIME_EXPRESSION}
-Current date/time: {CURRENT_DATETIME}
+First, locate the script relative to this skill file. It is in the same directory as this SKILL.md. Use Glob to find it if needed:
 
-STEPS — run each one using Bash:
+```
+skills/time-management/remind-me/create-reminder.sh
+```
 
-STEP 1: Resolve the date by running this python3 command (adapt the logic for the specific time expression):
+Then run it:
 
-python3 -c "
-from datetime import datetime, timedelta
-now = datetime.now()
-# Adapt for the expression — examples:
-# 'tomorrow morning' -> tomorrow at 9am
-# 'next Monday' -> find next Monday at 9am
-# 'in 2 hours' -> now + 2h
-# 'at 3pm' -> today 3pm if future, else tomorrow 3pm
-# 'this weekend' -> Saturday 10am
-# 'EOD' -> today 5pm
-target = now + timedelta(days=1)
-target = target.replace(hour=9, minute=0, second=0, microsecond=0)
-if target < now:
-    print('PAST')
-else:
-    print(f'{target.year} {target.month} {target.day} {target.hour} {target.minute}')
-    print(target.strftime('%A, %B %d, %Y at %I:%M %p'))
-"
+```bash
+path/to/create-reminder.sh YEAR MONTH DAY HOUR MINUTE "REMINDER_TEXT"
+```
 
-Time resolution rules:
-- "tomorrow" / "tomorrow morning" -> tomorrow 9:00 AM
-- "tomorrow afternoon" -> tomorrow 2:00 PM
-- "tomorrow evening" -> tomorrow 6:00 PM
-- "next Monday" (any weekday) -> next occurrence at 9:00 AM
-- "in X hours/minutes" -> now + X
-- "at 3pm" -> today if future, else tomorrow
-- "on April 15" -> that date at 9:00 AM
-- "on April 15 at 2pm" -> that date and time
-- "end of day" / "EOD" -> today 5:00 PM
-- "this weekend" -> Saturday 10:00 AM
-- "next week" -> next Monday 9:00 AM
-- "later today" -> 2 hours from now
-- Date with no time -> 9:00 AM
+**Arguments:**
+- YEAR: 4-digit year (e.g., 2026)
+- MONTH: month number 1-12 (e.g., 4 for April)
+- DAY: day of month 1-31 (e.g., 11)
+- HOUR: 24-hour format 0-23 (e.g., 14 for 2pm)
+- MINUTE: 0-59 (e.g., 0)
+- REMINDER_TEXT: the reminder text as a quoted string
 
-If output is PAST, respond: ERROR: resolved date is in the past. Then stop.
+**Example — "remind me to review the PR tomorrow at 2pm" (today is Friday April 10, 2026):**
 
-STEP 2: Create the reminder by running this osascript command. Replace YEAR, MONTH_NUM, DAY, HOUR, MINUTE with the numeric values from step 1. Replace REMINDER_TEXT with the reminder text (escape any double quotes with backslash):
+```bash
+skills/time-management/remind-me/create-reminder.sh 2026 4 11 14 0 "Review the PR"
+```
 
-osascript -e '
-set targetDate to current date
-set year of targetDate to YEAR
-set month of targetDate to MONTH_NUM
-set day of targetDate to DAY
-set hours of targetDate to HOUR
-set minutes of targetDate to MINUTE
-set seconds of targetDate to 0
-tell application "Reminders"
-    tell default list
-        make new reminder with properties {name:"REMINDER_TEXT", due date:targetDate}
-    end tell
-end tell'
+If the output contains "reminder id", it succeeded.
 
-IMPORTANT: Do NOT use 'date "string"' in AppleScript — it is locale-dependent and breaks. Always construct dates with set year/month/day/hours/minutes as shown.
+### Step 4: Confirm to the User
 
-STEP 3: Report the result.
+After creating the reminder, confirm with a clear summary including the day of week:
 
-If osascript output contains "reminder id", respond EXACTLY:
-RESULT: Reminder set: "REMINDER_TEXT" — HUMAN_READABLE_DATE
+> Reminder set: **"Review the PR"** — **Saturday, April 11 at 2:00 PM**
 
-If osascript failed with permissions error, respond EXACTLY:
-ERROR: Reminders permission needed. Grant access in System Settings > Privacy & Security > Reminders.
+## Error Handling
 
-For any other error:
-ERROR: description of what went wrong
-~~~
-
-### Step 3: Report Result
-
-Relay the subagent's result to the user. If successful:
-
-> Reminder set: **"[reminder text]"** — **Saturday, April 11 at 9:00 AM**
-
-If it failed, relay the error and any suggested fix.
+- **Permissions error:** Tell the user to grant access in System Settings > Privacy & Security > Reminders.
+- **Date in the past:** Warn and ask if they meant a future date.
 
 ## Examples
 
 **User:** "Remind me to review the deployment logs tomorrow morning"
-**Agent prompt fills in:** Reminder: "Review the deployment logs", When: "tomorrow morning"
+**Resolved:** 2026, 4, 11, 9, 0
 **Result:** Reminder set: "Review the deployment logs" — Saturday, April 11 at 9:00 AM
 
 **User:** "Don't let me forget to email Sarah about the proposal on Friday at 3pm"
-**Agent prompt fills in:** Reminder: "Email Sarah about the proposal", When: "Friday at 3pm"
+**Resolved:** 2026, 4, 17, 15, 0
 **Result:** Reminder set: "Email Sarah about the proposal" — Friday, April 17 at 3:00 PM
+
+**User:** "Remind me in 2 hours to check the build"
+**Resolved:** (current time + 2 hours)
+**Result:** Reminder set: "Check the build" — Friday, April 10 at 3:38 PM
