@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>[COMPANY] Ecosystem Landscape</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<style>
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 30px;
+    background: #fafafa;
+    color: #1a1a1a;
+  }
+  h1 { font-size: 22px; margin: 0 0 6px 0; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .legend {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-swatch {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .legend-swatch.dashed {
+    background-image: linear-gradient(to right, currentColor 50%, transparent 50%);
+    background-size: 8px 3px;
+    height: 3px;
+  }
+  #chart { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 16px; }
+  .node rect { stroke: #fff; stroke-width: 2; cursor: pointer; }
+  .node text { font-size: 12px; pointer-events: none; fill: #222; }
+  .node.target rect { stroke: #d97706; stroke-width: 3; }
+  .node.target text { font-weight: 600; fill: #7c2d12; }
+  .link { fill: none; opacity: 0.5; }
+  .link:hover { opacity: 0.9; }
+  .column-label {
+    font-size: 11px;
+    font-weight: 600;
+    fill: #4a5b6a;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .tooltip {
+    position: absolute;
+    background: #1a1a1a;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .caption { font-size: 12px; color: #555; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<h1>[COMPANY NAME] — Ecosystem Landscape</h1>
+<div class="subtitle">As of [YYYY-MM-DD]. Flows show how data, revenue, and products move between player types.</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> Data flow</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#10b981"></div> Recurring revenue</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#f59e0b"></div> One-off revenue</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#6b7280"></div> Product / service</div>
+  <div class="legend-item"><div class="legend-swatch dashed" style="color:#94a3b8"></div> Potential / speculative</div>
+</div>
+
+<div id="chart"></div>
+<div class="tooltip" id="tooltip"></div>
+
+<div class="caption">
+  Sources: [list sources]. The target company is outlined in orange. Hover links for flow details.
+</div>
+
+<script>
+// ===========================================
+// EDIT THIS SECTION to describe your ecosystem
+// ===========================================
+
+// Columns define the player roles (left to right)
+const columns = [
+  { id: 'sources', label: 'DATA SOURCES / CREATORS' },
+  { id: 'platforms', label: 'PLATFORMS / BROKERS' },
+  { id: 'buyers', label: 'BUYERS / CONSUMERS' }
+];
+
+// Nodes are individual companies. Set `target: true` on the company being researched.
+const nodes = [
+  // Sources
+  { id: 'source-a', name: '[Source A]', column: 'sources' },
+  { id: 'source-b', name: '[Source B]', column: 'sources' },
+  { id: 'source-c', name: '[Source C]', column: 'sources' },
+
+  // Platforms (target company lives here typically)
+  { id: 'target', name: '[TARGET COMPANY]', column: 'platforms', target: true },
+  { id: 'competitor-a', name: '[Competitor A]', column: 'platforms' },
+  { id: 'competitor-b', name: '[Competitor B]', column: 'platforms' },
+
+  // Buyers
+  { id: 'buyer-a', name: '[Buyer A]', column: 'buyers' },
+  { id: 'buyer-b', name: '[Buyer B]', column: 'buyers' },
+  { id: 'buyer-c', name: '[Buyer C]', column: 'buyers' }
+];
+
+// Links define the flows. `type` controls colour.
+// Types: 'data', 'recurring', 'oneoff', 'product', 'potential'
+const links = [
+  { source: 'source-a', target: 'target', type: 'data', value: 4, label: 'User-generated data' },
+  { source: 'source-b', target: 'target', type: 'data', value: 3, label: 'Enrichment data' },
+  { source: 'source-c', target: 'competitor-a', type: 'data', value: 3, label: 'User-generated data' },
+  { source: 'target', target: 'buyer-a', type: 'recurring', value: 5, label: 'SaaS subscription' },
+  { source: 'target', target: 'buyer-b', type: 'recurring', value: 3, label: 'SaaS subscription' },
+  { source: 'competitor-a', target: 'buyer-a', type: 'recurring', value: 2, label: 'Competing offer' },
+  { source: 'competitor-b', target: 'buyer-c', type: 'oneoff', value: 3, label: 'Perpetual license' },
+  { source: 'target', target: 'buyer-c', type: 'potential', value: 2, label: 'Potential expansion' }
+];
+
+// ===========================================
+// Rendering logic — generally don't need to edit below
+// ===========================================
+
+const width = 1000;
+const height = 520;
+const margin = { top: 40, right: 200, bottom: 20, left: 200 };
+
+const svg = d3.select('#chart').append('svg')
+  .attr('viewBox', `0 0 ${width} ${height}`)
+  .style('width', '100%').style('height', 'auto');
+
+const flowColors = {
+  data: '#3b82f6',
+  recurring: '#10b981',
+  oneoff: '#f59e0b',
+  product: '#6b7280',
+  potential: '#94a3b8'
+};
+
+// Position columns evenly across the width
+const colX = {};
+columns.forEach((c, i) => {
+  colX[c.id] = margin.left + (i * (width - margin.left - margin.right) / (columns.length - 1));
+});
+
+// Column labels
+svg.selectAll('.column-label').data(columns).join('text')
+  .attr('class', 'column-label')
+  .attr('x', d => colX[d.id])
+  .attr('y', 20)
+  .attr('text-anchor', 'middle')
+  .text(d => d.label);
+
+// Position nodes vertically within each column
+const nodesByCol = d3.group(nodes, d => d.column);
+nodesByCol.forEach((nodesInCol, colId) => {
+  const n = nodesInCol.length;
+  const verticalSpace = height - margin.top - margin.bottom;
+  nodesInCol.forEach((node, i) => {
+    node.x = colX[colId];
+    node.y = margin.top + ((i + 0.5) * verticalSpace / n);
+  });
+});
+
+const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
+
+// Draw links
+const tooltip = d3.select('#tooltip');
+
+svg.selectAll('.link').data(links).join('path')
+  .attr('class', 'link')
+  .attr('d', d => {
+    const s = nodeMap[d.source];
+    const t = nodeMap[d.target];
+    const midX = (s.x + t.x) / 2;
+    return `M${s.x + 50},${s.y} C${midX},${s.y} ${midX},${t.y} ${t.x - 50},${t.y}`;
+  })
+  .attr('stroke', d => flowColors[d.type] || '#999')
+  .attr('stroke-width', d => Math.max(1.5, d.value || 2))
+  .attr('stroke-dasharray', d => d.type === 'potential' ? '6 4' : null)
+  .on('mouseover', (event, d) => {
+    tooltip.style('opacity', 1)
+      .html(`<strong>${d.label}</strong><br>${nodeMap[d.source].name} → ${nodeMap[d.target].name}`);
+  })
+  .on('mousemove', event => {
+    tooltip.style('left', (event.pageX + 12) + 'px').style('top', (event.pageY - 10) + 'px');
+  })
+  .on('mouseout', () => tooltip.style('opacity', 0));
+
+// Draw nodes
+const nodeGroup = svg.selectAll('.node').data(nodes).join('g')
+  .attr('class', d => 'node' + (d.target ? ' target' : ''))
+  .attr('transform', d => `translate(${d.x},${d.y})`);
+
+nodeGroup.append('rect')
+  .attr('x', -50).attr('y', -14)
+  .attr('width', 100).attr('height', 28)
+  .attr('rx', 4)
+  .attr('fill', d => d.target ? '#fef3c7' : '#e5e7eb');
+
+nodeGroup.append('text')
+  .attr('text-anchor', 'middle')
+  .attr('dy', '0.35em')
+  .text(d => d.name);
+</script>
+</body>
+</html>

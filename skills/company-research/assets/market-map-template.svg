@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Market map template for company-research skill.
+  
+  To adapt:
+  1. Change the two axis labels (AXIS_X_LOW, AXIS_X_HIGH, AXIS_Y_LOW, AXIS_Y_HIGH)
+  2. Replace the cluster rectangles and labels with real cluster groupings
+  3. Replace the company dots with actual competitors — position them deliberately
+  4. Highlight the target company (use .target-company class)
+  5. Update the title and caption
+  6. Set the date
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650" font-family="system-ui, -apple-system, sans-serif">
+  <style>
+    .title { font-size: 20px; font-weight: 600; fill: #1a1a1a; }
+    .subtitle { font-size: 12px; fill: #666; }
+    .axis-line { stroke: #333; stroke-width: 1.5; fill: none; }
+    .axis-label { font-size: 13px; font-weight: 500; fill: #333; }
+    .axis-end { font-size: 11px; fill: #666; font-style: italic; }
+    .cluster { fill: #f0f4f8; stroke: #c5d2dc; stroke-width: 1; stroke-dasharray: 4 3; rx: 12; }
+    .cluster-label { font-size: 11px; font-weight: 600; fill: #4a5b6a; letter-spacing: 0.3px; }
+    .company { fill: #7a8fa3; stroke: #fff; stroke-width: 1.5; }
+    .company-label { font-size: 11px; fill: #222; }
+    .target-company { fill: #d97706; stroke: #7c2d12; stroke-width: 2; }
+    .target-company-label { font-size: 12px; font-weight: 600; fill: #7c2d12; }
+    .uncertain { fill: #cbd5e1; opacity: 0.7; }
+    .caption { font-size: 11px; fill: #555; }
+    .legend-box { fill: #fff; stroke: #ddd; stroke-width: 1; rx: 4; }
+    .legend-label { font-size: 11px; fill: #333; }
+  </style>
+
+  <!-- Title -->
+  <text x="30" y="35" class="title">[COMPANY NAME] — Competitive Landscape</text>
+  <text x="30" y="54" class="subtitle">As of [YYYY-MM-DD]. Axes: [Axis X rationale] × [Axis Y rationale].</text>
+
+  <!-- Plot area boundary -->
+  <!-- Coordinates: plot area is roughly x=100..820, y=100..540 -->
+
+  <!-- Y-axis (vertical) -->
+  <line x1="100" y1="100" x2="100" y2="540" class="axis-line" />
+  <!-- Y-axis arrow -->
+  <polygon points="100,95 95,105 105,105" fill="#333" />
+  <!-- Y-axis label (rotated) -->
+  <text x="-320" y="40" class="axis-label" transform="rotate(-90)">[AXIS Y LABEL]</text>
+  <text x="85" y="105" class="axis-end" text-anchor="end">↑ [Axis Y high]</text>
+  <text x="85" y="545" class="axis-end" text-anchor="end">[Axis Y low]</text>
+
+  <!-- X-axis (horizontal) -->
+  <line x1="100" y1="540" x2="820" y2="540" class="axis-line" />
+  <!-- X-axis arrow -->
+  <polygon points="825,540 815,535 815,545" fill="#333" />
+  <!-- X-axis label -->
+  <text x="460" y="580" class="axis-label" text-anchor="middle">[AXIS X LABEL]</text>
+  <text x="100" y="558" class="axis-end">[Axis X low]</text>
+  <text x="820" y="558" class="axis-end" text-anchor="end">[Axis X high] →</text>
+
+  <!-- Example cluster 1: Established enterprise vendors (top-right quadrant) -->
+  <rect x="500" y="130" width="280" height="150" class="cluster" />
+  <text x="640" y="125" class="cluster-label" text-anchor="middle">ESTABLISHED ENTERPRISE VENDORS</text>
+
+  <!-- Example cluster 2: AI-native challengers (middle) -->
+  <rect x="280" y="250" width="260" height="140" class="cluster" />
+  <text x="410" y="245" class="cluster-label" text-anchor="middle">AI-NATIVE CHALLENGERS</text>
+
+  <!-- Example cluster 3: Open-source / community (bottom-left) -->
+  <rect x="130" y="380" width="230" height="140" class="cluster" />
+  <text x="245" y="375" class="cluster-label" text-anchor="middle">OPEN-SOURCE / COMMUNITY</text>
+
+  <!-- Example competitor dots — replace with real data -->
+  <!-- Established vendors -->
+  <circle cx="570" cy="180" r="8" class="company" />
+  <text x="582" y="184" class="company-label">[Competitor A]</text>
+
+  <circle cx="680" cy="220" r="8" class="company" />
+  <text x="692" y="224" class="company-label">[Competitor B]</text>
+
+  <circle cx="740" cy="165" r="8" class="company" />
+  <text x="752" y="169" class="company-label">[Competitor C]</text>
+
+  <!-- AI-native challengers -->
+  <circle cx="340" cy="300" r="8" class="company" />
+  <text x="352" y="304" class="company-label">[Challenger A]</text>
+
+  <!-- Target company — highlighted -->
+  <circle cx="440" cy="330" r="11" class="target-company" />
+  <text x="455" y="334" class="target-company-label">[TARGET COMPANY]</text>
+
+  <circle cx="480" cy="290" r="8" class="company" />
+  <text x="492" y="294" class="company-label">[Challenger B]</text>
+
+  <!-- Open-source -->
+  <circle cx="200" cy="430" r="8" class="company" />
+  <text x="212" y="434" class="company-label">[OSS project A]</text>
+
+  <circle cx="290" cy="470" r="8" class="company" />
+  <text x="302" y="474" class="company-label">[OSS project B]</text>
+
+  <!-- Example uncertain / potential entrant -->
+  <circle cx="750" cy="400" r="10" class="uncertain" stroke="#999" stroke-dasharray="3 2" stroke-width="1.5" />
+  <text x="764" y="404" class="company-label" font-style="italic">[Potential entrant]?</text>
+
+  <!-- Legend -->
+  <rect x="30" y="600" width="840" height="40" class="legend-box" />
+  <circle cx="50" cy="620" r="6" class="target-company" />
+  <text x="62" y="624" class="legend-label">Target company</text>
+  <circle cx="200" cy="620" r="6" class="company" />
+  <text x="212" y="624" class="legend-label">Competitor (confirmed positioning)</text>
+  <circle cx="430" cy="620" r="6" class="uncertain" stroke="#999" stroke-dasharray="3 2" stroke-width="1.5" />
+  <text x="442" y="624" class="legend-label">Potential entrant / uncertain positioning</text>
+  <rect x="640" y="614" width="14" height="12" class="cluster" />
+  <text x="660" y="624" class="legend-label">Competitor cluster</text>
+
+  <!-- Caption -->
+  <text x="30" y="660" class="caption">Sources: [list primary sources — e.g. company websites, Gartner 20XX, industry press]. Positioning reflects analyst judgement as of [YYYY-MM-DD].</text>
+</svg>
